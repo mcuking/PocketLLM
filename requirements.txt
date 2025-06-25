@@ -1,0 +1,2 @@
+torch >= 2.3.0
+tiktoken >= 0.5.1
