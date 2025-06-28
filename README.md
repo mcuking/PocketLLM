@@ -13,15 +13,17 @@ todo
 git clone https://github.com/mcuking/LLMs-from-scratch.git
 cd LLMs-from-scratch
 
-## 确保 python 版本为 3.10，例如 macOS
-brew install python@3.10 # macOS
+## 确保 python 版本为 3.11，例如 macOS 系统
+brew install python@3.11 # macOS
 
-# 创建并激活虚拟环境
-python -m venv .venv
-source .venv/bin/activate
+# 创建虚拟环境
+uv venv --python=python3.11
+
+# 激活虚拟环境
+source .venv/bin/activate # macOS
 
 # 安装依赖
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
 ## 使用示例
