@@ -9,22 +9,10 @@ inputs = torch.tensor(
    [0.05, 0.80, 0.55]] # step     (x^6)
 )
 
-query = inputs[1]
+# 计算点积注意力分数
+attn_scores = inputs @ inputs.T
+print("Attention Scores:\n", attn_scores)
 
-attn_scores_2 = torch.empty(inputs.shape[0])
-# 这里使用了一个简单的点积注意力机制
-# 计算某个输入词元嵌入向量与所有输入词元嵌入向量的点积
-# 用来计算注意力分数
-for i, x_i in enumerate(inputs):
-    attn_scores_2[i] = torch.dot(x_i, query)
-
-attn_weights_2 = torch.softmax(attn_scores_2, dim=0)
-print("Attention Weights:", attn_weights_2)
-print("Sum of Weights:", attn_weights_2.sum())
-
-# 使用注意力权重计算上下文向量
-context_vector_2 = torch.zeros(inputs.shape[1])
-# 上下文向量是所有输入词元嵌入向量的加权和
-for i, x_i in enumerate(inputs):
-    context_vector_2 += attn_weights_2[i] * x_i
-print("Context Vector:", context_vector_2)
+# 计算点积注意力权重
+attn_weights = torch.softmax(attn_scores, dim=1)
+print("Attention Weights:\n", attn_weights)
