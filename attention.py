@@ -16,3 +16,7 @@ print("Attention Scores:\n", attn_scores)
 # 计算点积注意力权重
 attn_weights = torch.softmax(attn_scores, dim=1)
 print("Attention Weights:\n", attn_weights)
+
+# 计算上下文向量
+context_vector = attn_weights @ inputs
+print("Context Vector:\n", context_vector)
