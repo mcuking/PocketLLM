@@ -21,3 +21,10 @@ for i, x_i in enumerate(inputs):
 attn_weights_2 = torch.softmax(attn_scores_2, dim=0)
 print("Attention Weights:", attn_weights_2)
 print("Sum of Weights:", attn_weights_2.sum())
+
+# 使用注意力权重计算上下文向量
+context_vector_2 = torch.zeros(inputs.shape[1])
+# 上下文向量是所有输入词元嵌入向量的加权和
+for i, x_i in enumerate(inputs):
+    context_vector_2 += attn_weights_2[i] * x_i
+print("Context Vector:", context_vector_2)
