@@ -9,14 +9,41 @@ inputs = torch.tensor(
    [0.05, 0.80, 0.55]] # step     (x^6)
 )
 
-# 计算点积注意力分数
-attn_scores = inputs @ inputs.T
-print("Attention Scores:\n", attn_scores)
+x_2 = inputs[1]
+d_in = inputs.shape[1]
+d_out = 2
 
-# 计算点积注意力权重
-attn_weights = torch.softmax(attn_scores, dim=1)
-print("Attention Weights:\n", attn_weights)
+torch.manual_seed(123)  # 设置随机种子以保证结果可复现
+# 生成三个权重矩阵：
+# 查询矩阵Wq：表示“我需要什么信息“
+# 键矩阵Wk：表示“我能提供什么信息“
+# 值矩阵Wv：表示“我的实际价值内容“
+# 假设我们有一个句子：“The cat sat on the mat”
+# 查询空间：让“sat”的查询向量能够询问“谁在坐？”（关注主语）和“坐在哪里？”（关注地点）。
+# 键空间：让“cat”的键向量能够表示“我是主语”，而“mat”的键向量表示“我是地点”。
+# 值空间：当“cat”被关注时，它的值向量提供关于主语的详细信息（如“cat”是动物，单数等）；当“mat”被关注时，它的值向量提供关于地点的信息（如“mat”是物体，在下面等）。
+W_query = torch.nn.Parameter(torch.randn(d_in, d_out), requires_grad=False)
+W_key = torch.nn.Parameter(torch.randn(d_in, d_out), requires_grad=False)
+W_value = torch.nn.Parameter(torch.randn(d_in, d_out), requires_grad=False)
+print("W_query:", W_query)
 
-# 计算上下文向量
-context_vector = attn_weights @ inputs
-print("Context Vector:\n", context_vector)
+# 计算查询、键和值向量
+query_2 = x_2 @ W_query
+keys = inputs @ W_key
+values = inputs @ W_value
+print("query_2:", query_2)
+print("keys:", keys)
+print("values:", values)
+
+# 计算注意力分数
+# 通过计算 query_2 和每个键向量的点积和
+attention_scores_2 = query_2 @ keys.T
+print("attention_scores_2:", attention_scores_2)
+
+# 计算注意力权重
+# 使用 softmax 函数将注意力分数转换为权重
+# 注意力分数除以键向量的维度的平方根，以防止梯度消失
+# 这里的 d_k 是键向量的维度
+d_k = keys.shape[-1]  # 键向量的维度
+attention_weights_2 = torch.softmax(attention_scores_2 / d_k**0.5, dim=-1)
+print("attention_weights:", attention_weights_2)
