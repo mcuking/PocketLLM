@@ -47,3 +47,8 @@ print("attention_scores_2:", attention_scores_2)
 d_k = keys.shape[-1]  # 键向量的维度
 attention_weights_2 = torch.softmax(attention_scores_2 / d_k**0.5, dim=-1)
 print("attention_weights:", attention_weights_2)
+
+# 计算上下文向量
+# 上下文向量是注意力权重和值向量的加权和
+context_vector_2 = attention_weights_2 @ values
+print("context_vector_2:", context_vector_2)
