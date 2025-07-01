@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 
 inputs = torch.tensor(
   [[0.43, 0.15, 0.89], # Your     (x^1)
@@ -9,8 +10,8 @@ inputs = torch.tensor(
    [0.05, 0.80, 0.55]] # step     (x^6)
 )
 
-# 当我们定义一个PyTorch模型时，通常会继承`torch.nn.Module`类
-class CausalfAttention(torch.nn.Module):
+# 当我们定义一个PyTorch模型时，通常会继承`nn.Module`类
+class CausalfAttention(nn.Module):
     def __init__(self, d_in, d_out, context_length, dropout, qkv_bias=False):
         super().__init__()
         # 生成三个权重矩阵：
@@ -21,9 +22,9 @@ class CausalfAttention(torch.nn.Module):
         # 查询空间：让“sat”的查询向量能够询问“谁在坐？”（关注主语）和“坐在哪里？”（关注地点）。
         # 键空间：让“cat”的键向量能够表示“我是主语”，而“mat”的键向量表示“我是地点”。
         # 值空间：当“cat”被关注时，它的值向量提供关于主语的详细信息（如“cat”是动物，单数等）；当“mat”被关注时，它的值向量提供关于地点的信息（如“mat”是物体，在下面等）。
-        self.W_query = torch.nn.Linear(d_in, d_out, bias=qkv_bias)
-        self.W_key = torch.nn.Linear(d_in, d_out, bias=qkv_bias)
-        self.W_value = torch.nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
 
         # 掩码（mask）用于屏蔽某些位置的注意力分数
         # 例如，对于一个3x3的矩阵，`torch.triu(torch.ones(3,3), diagonal=1)`会得到：
@@ -38,7 +39,7 @@ class CausalfAttention(torch.nn.Module):
         # 在训练过程中，dropout 会随机丢弃一部分神经元的输出，
         # 以减少模型对特定神经元的依赖，从而提高模型的泛化能力。
         # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
-        self.dropout = torch.nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout)
 
     # 我们在子类中定义`forward`方法，该方法描述了前向传播的计算过程。
     def forward(self, x):
@@ -51,22 +52,25 @@ class CausalfAttention(torch.nn.Module):
 
         # 计算注意力分数
         # 通过计算每个查询向量和每个键向量的点积来计算注意力分数
-        attention_scores = queries @ keys.T
+        # 注意：因为增加了batch维度后，不能直接用 T 进行转置，
+        # 因为 T 只会转置最后两个维度。
+        # 这里我们使用 `transpose(1, 2)` 来转置第二和第三个维度。
+        attn_scores = queries @ keys.transpose(1, 2)
 
         # 因果注意力
         # 添加掩码（mask）来屏蔽某些位置的注意力分数
         # 例如，在自回归模型中，我们可以使用掩码来确保模型只能关注之前的输入，而不能关注未来的输入。
         # 这可以通过将注意力分数中某些位置设置为负无穷大（-inf）来实现，这样在 softmax 计算时，这些位置的权重将变为零。
-        # `attention_scores.masked_fill_(mask, value)`: 这是一个原地操作（带下划线），直接作用于原数据，减少不必要的内存拷贝。
-        # 用`value`填充`attention_scores`中所有`mask`为True的位置。
+        # `attn_scores.masked_fill_(mask, value)`: 这是一个原地操作（带下划线），直接作用于原数据，减少不必要的内存拷贝。
+        # 用`value`填充`attn_scores`中所有`mask`为True的位置。
         # 这里，我们将这些位置填充为`-torch.inf`，即负无穷。
-        attention_scores.masked_fill_(self.mask.bool(), -torch.inf)
-        print("Attention Scores:\n", attention_scores)
+        attn_scores.masked_fill_(self.mask.bool(), -torch.inf)
+        print("Attention Scores:\n", attn_scores)
 
         # 计算注意力权重
         # 使用 softmax 函数将注意力分数转换为权重
         # 注意力分数除以键向量的维度的平方根，以防止梯度消失
-        attention_weights = torch.softmax(attention_scores / keys.shape[-1]**0.5, dim=-1)
+        attn_weights = torch.softmax(attn_scores / keys.shape[-1]**0.5, dim=-1)
         
         # 应用 dropout
         # 在训练过程中，为了防止过拟合，我们可以在注意力权重上应用 dropout，丢掉一部分注意力权重。
@@ -75,18 +79,21 @@ class CausalfAttention(torch.nn.Module):
         # 以减少模型对特定神经元的依赖，从而提高模型的泛化能力。
         # dropout 的概率是一个超参数，通常在 0.1 到 0.5 之间。
         # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
-        attention_weights = self.dropout(attention_weights)
-        print("Attention Weights:\n", attention_weights)
+        attn_weights = self.dropout(attn_weights)
+        print("Attention Weights:\n", attn_weights)
 
         # 计算上下文向量
         # 上下文向量是注意力权重和值向量的加权和
-        context_vector = attention_weights @ values
+        context_vector = attn_weights @ values
         return context_vector
     
-
-d_in = inputs.shape[1]
+# 将输入数据扩展为批处理（batch）的形式
+# 在实际应用中，我们通常会处理多个输入样本。
+# 例如，在自然语言处理任务中，一个批处理可能包含多个句子，每个句子都是一个独立的输入样本。
+batch = torch.stack((inputs, inputs), dim=0)
+d_in = batch.shape[2]
 d_out = 2
-context_length = inputs.shape[0]
+context_length = batch.shape[1]
 
 # 设置随机种子以保证结果可复现
 torch.manual_seed(123)
@@ -97,5 +104,5 @@ ca = CausalfAttention(d_in, d_out, context_length, 0.2)
 # 同时还会处理一些其他事情（例如钩子、梯度记录等）。
 # 神经网络层本质是数学函数：y = f(x)
 # f(x) 比 f.forward(x) 更符合数学直觉
-context_vector = ca(inputs)
+context_vector = ca(batch)
 print("Context Vector:\n", context_vector)
