@@ -11,7 +11,7 @@ inputs = torch.tensor(
 
 # 当我们定义一个PyTorch模型时，通常会继承`torch.nn.Module`类
 class CausalfAttention(torch.nn.Module):
-    def __init__(self, d_in, d_out, context_length, qkv_bias=False):
+    def __init__(self, d_in, d_out, context_length, dropout, qkv_bias=False):
         super().__init__()
         # 生成三个权重矩阵：
         # 查询矩阵Wq：表示“我需要什么信息“
@@ -33,6 +33,12 @@ class CausalfAttention(torch.nn.Module):
         # 其中 `diagonal=1`表示从主对角线向上偏移1的位置开始（即不包括主对角线）。
         # 所以主对角线上方的元素（包括对角线上面的一条）会被保留
         self.mask = torch.triu(torch.ones(context_length, context_length), diagonal=1)
+
+        # dropout 是一种深度学习中的正则化技术，用于防止过拟合。
+        # 在训练过程中，dropout 会随机丢弃一部分神经元的输出，
+        # 以减少模型对特定神经元的依赖，从而提高模型的泛化能力。
+        # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
+        self.dropout = torch.nn.Dropout(dropout)
 
     # 我们在子类中定义`forward`方法，该方法描述了前向传播的计算过程。
     def forward(self, x):
@@ -61,6 +67,15 @@ class CausalfAttention(torch.nn.Module):
         # 使用 softmax 函数将注意力分数转换为权重
         # 注意力分数除以键向量的维度的平方根，以防止梯度消失
         attention_weights = torch.softmax(attention_scores / keys.shape[-1]**0.5, dim=-1)
+        
+        # 应用 dropout
+        # 在训练过程中，为了防止过拟合，我们可以在注意力权重上应用 dropout，丢掉一部分注意力权重。
+        # 过拟合指的是模型在训练数据上表现很好，但在新数据上表现不佳。
+        # dropout 是一种正则化技术，可以在训练过程中随机丢弃一部分神经元的输出，
+        # 以减少模型对特定神经元的依赖，从而提高模型的泛化能力。
+        # dropout 的概率是一个超参数，通常在 0.1 到 0.5 之间。
+        # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
+        attention_weights = self.dropout(attention_weights)
         print("Attention Weights:\n", attention_weights)
 
         # 计算上下文向量
@@ -75,7 +90,7 @@ context_length = inputs.shape[0]
 
 # 设置随机种子以保证结果可复现
 torch.manual_seed(123)
-ca = CausalfAttention(d_in, d_out, context_length)
+ca = CausalfAttention(d_in, d_out, context_length, 0.2)
 # 在`nn.Module`中，有一个`__call__`方法被重写。
 # 当我们像函数一样调用模块实例（例如`sa_v1(inputs)`）时，
 # 实际上调用的是`__call__`方法， `__call__`方法内部会调用`forward`方法，
