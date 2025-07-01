@@ -10,8 +10,8 @@ inputs = torch.tensor(
 )
 
 # 当我们定义一个PyTorch模型时，通常会继承`torch.nn.Module`类
-class SelfAttention_v1(torch.nn.Module):
-    def __init__(self, d_in, d_out, qkv_bias=False):
+class CausalfAttention(torch.nn.Module):
+    def __init__(self, d_in, d_out, context_length, qkv_bias=False):
         super().__init__()
         # 生成三个权重矩阵：
         # 查询矩阵Wq：表示“我需要什么信息“
@@ -24,6 +24,15 @@ class SelfAttention_v1(torch.nn.Module):
         self.W_query = torch.nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_key = torch.nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_value = torch.nn.Linear(d_in, d_out, bias=qkv_bias)
+
+        # 掩码（mask）用于屏蔽某些位置的注意力分数
+        # 例如，对于一个3x3的矩阵，`torch.triu(torch.ones(3,3), diagonal=1)`会得到：
+        # [[0, 1, 1],
+        #  [0, 0, 1],
+        #  [0, 0, 0]]
+        # 其中 `diagonal=1`表示从主对角线向上偏移1的位置开始（即不包括主对角线）。
+        # 所以主对角线上方的元素（包括对角线上面的一条）会被保留
+        self.mask = torch.triu(torch.ones(context_length, context_length), diagonal=1)
 
     # 我们在子类中定义`forward`方法，该方法描述了前向传播的计算过程。
     def forward(self, x):
@@ -38,10 +47,21 @@ class SelfAttention_v1(torch.nn.Module):
         # 通过计算每个查询向量和每个键向量的点积来计算注意力分数
         attention_scores = queries @ keys.T
 
+        # 因果注意力
+        # 添加掩码（mask）来屏蔽某些位置的注意力分数
+        # 例如，在自回归模型中，我们可以使用掩码来确保模型只能关注之前的输入，而不能关注未来的输入。
+        # 这可以通过将注意力分数中某些位置设置为负无穷大（-inf）来实现，这样在 softmax 计算时，这些位置的权重将变为零。
+        # `attention_scores.masked_fill_(mask, value)`: 这是一个原地操作（带下划线），直接作用于原数据，减少不必要的内存拷贝。
+        # 用`value`填充`attention_scores`中所有`mask`为True的位置。
+        # 这里，我们将这些位置填充为`-torch.inf`，即负无穷。
+        attention_scores.masked_fill_(self.mask.bool(), -torch.inf)
+        print("Attention Scores:\n", attention_scores)
+
         # 计算注意力权重
         # 使用 softmax 函数将注意力分数转换为权重
         # 注意力分数除以键向量的维度的平方根，以防止梯度消失
         attention_weights = torch.softmax(attention_scores / keys.shape[-1]**0.5, dim=-1)
+        print("Attention Weights:\n", attention_weights)
 
         # 计算上下文向量
         # 上下文向量是注意力权重和值向量的加权和
@@ -51,15 +71,16 @@ class SelfAttention_v1(torch.nn.Module):
 
 d_in = inputs.shape[1]
 d_out = 2
+context_length = inputs.shape[0]
 
 # 设置随机种子以保证结果可复现
 torch.manual_seed(123)
-sa_v1 = SelfAttention_v1(d_in, d_out)
+ca = CausalfAttention(d_in, d_out, context_length)
 # 在`nn.Module`中，有一个`__call__`方法被重写。
 # 当我们像函数一样调用模块实例（例如`sa_v1(inputs)`）时，
 # 实际上调用的是`__call__`方法， `__call__`方法内部会调用`forward`方法，
 # 同时还会处理一些其他事情（例如钩子、梯度记录等）。
 # 神经网络层本质是数学函数：y = f(x)
 # f(x) 比 f.forward(x) 更符合数学直觉
-context_vector = sa_v1(inputs)
+context_vector = ca(inputs)
 print("Context Vector:\n", context_vector)
