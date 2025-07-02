@@ -33,7 +33,10 @@ class CausalfAttention(nn.Module):
         #  [0, 0, 0]]
         # 其中 `diagonal=1`表示从主对角线向上偏移1的位置开始（即不包括主对角线）。
         # 所以主对角线上方的元素（包括对角线上面的一条）会被保留
-        self.mask = torch.triu(torch.ones(context_length, context_length), diagonal=1)
+        mask = torch.triu(torch.ones(context_length, context_length), diagonal=1)
+        # 在这里，我们使用 `register_buffer` 将掩码注册为模型的一个缓冲区。
+        # 缓冲区会和模型一起自动移动到适当的设备（如GPU或CPU），无需手动确保这些张量和模型参数在同一设备上，从而避免设备不匹配的错误
+        self.register_buffer("mask", mask)
 
         # dropout 是一种深度学习中的正则化技术，用于防止过拟合。
         # 在训练过程中，dropout 会随机丢弃一部分神经元的输出，
@@ -64,8 +67,9 @@ class CausalfAttention(nn.Module):
         # `attn_scores.masked_fill_(mask, value)`: 这是一个原地操作（带下划线），直接作用于原数据，减少不必要的内存拷贝。
         # 用`value`填充`attn_scores`中所有`mask`为True的位置。
         # 这里，我们将这些位置填充为`-torch.inf`，即负无穷。
-        attn_scores.masked_fill_(self.mask.bool(), -torch.inf)
-        print("Attention Scores:\n", attn_scores)
+        mask_bool = self.mask.bool()
+        attn_scores.masked_fill_(mask_bool, -torch.inf)
+        print("Attn Scores:\n", attn_scores)
 
         # 计算注意力权重
         # 使用 softmax 函数将注意力分数转换为权重
@@ -80,12 +84,12 @@ class CausalfAttention(nn.Module):
         # dropout 的概率是一个超参数，通常在 0.1 到 0.5 之间。
         # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
         attn_weights = self.dropout(attn_weights)
-        print("Attention Weights:\n", attn_weights)
+        print("Attn Weights:\n", attn_weights)
 
         # 计算上下文向量
         # 上下文向量是注意力权重和值向量的加权和
-        context_vector = attn_weights @ values
-        return context_vector
+        context_vec = attn_weights @ values
+        return context_vec
     
 # 将输入数据扩展为批处理（batch）的形式
 # 在实际应用中，我们通常会处理多个输入样本。
@@ -97,12 +101,12 @@ context_length = batch.shape[1]
 
 # 设置随机种子以保证结果可复现
 torch.manual_seed(123)
-ca = CausalfAttention(d_in, d_out, context_length, 0.2)
+ca = CausalfAttention(d_in, d_out, context_length, 0.0)
 # 在`nn.Module`中，有一个`__call__`方法被重写。
 # 当我们像函数一样调用模块实例（例如`sa_v1(inputs)`）时，
 # 实际上调用的是`__call__`方法， `__call__`方法内部会调用`forward`方法，
 # 同时还会处理一些其他事情（例如钩子、梯度记录等）。
 # 神经网络层本质是数学函数：y = f(x)
 # f(x) 比 f.forward(x) 更符合数学直觉
-context_vector = ca(batch)
-print("Context Vector:\n", context_vector)
+context_vec = ca(batch)
+print("Context Vec:\n", context_vec)
