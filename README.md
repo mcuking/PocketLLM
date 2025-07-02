@@ -1,6 +1,6 @@
-# LLMs from Scratch
+# small-llm
 
-跟着 [《从零构建大模型》](https://book.douban.com/subject/37305124/) 这本书从零实现大型语言模型的核心组件，帮助理解 LLMs 的工作原理。
+跟着 [《从零构建大模型》](https://book.douban.com/subject/37305124/) 跑通完整的构建流程，以达到深入理解大语言模型内部工作机制的目的。
 
 ## 项目结构
 
@@ -10,7 +10,7 @@ todo
 
 ```bash
 # 克隆仓库
-git clone https://github.com/mcuking/LLMs-from-scratch.git
+git clone https://github.com/mcuking/small-llm.git
 cd LLMs-from-scratch
 
 ## 确保 python 版本为 3.11，例如 macOS 系统
