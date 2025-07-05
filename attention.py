@@ -90,23 +90,37 @@ class CausalfAttention(nn.Module):
         # 上下文向量是注意力权重和值向量的加权和
         context_vec = attn_weights @ values
         return context_vec
+
+class MultiHeadAttentionWrapper(nn.Module):
+    def __init__(self, d_in, d_out, context_length, dropout, num_heads, qkv_bias=False):
+        super().__init__()
+        # 叠加多个单头注意力层
+        self.heads = nn.ModuleList([
+            CausalfAttention(d_in, d_out, context_length, dropout, qkv_bias)
+            for _ in range(num_heads)
+        ])
+
+    def forward(self, x):
+        # 对每个头进行前向传播，并将结果拼接在一起
+        # 在最后一个维度上拼接所有头的输出
+        return torch.cat([head(x) for head in self.heads], dim=-1)
     
 # 将输入数据扩展为批处理（batch）的形式
 # 在实际应用中，我们通常会处理多个输入样本。
 # 例如，在自然语言处理任务中，一个批处理可能包含多个句子，每个句子都是一个独立的输入样本。
 batch = torch.stack((inputs, inputs), dim=0)
-d_in = batch.shape[2]
+d_in = batch.shape[2] # 单个词元向量的维度，batch 的最第三个维度
 d_out = 2
-context_length = batch.shape[1]
+context_length = batch.shape[1] # 词元的数量
 
 # 设置随机种子以保证结果可复现
 torch.manual_seed(123)
-ca = CausalfAttention(d_in, d_out, context_length, 0.0)
+mha = MultiHeadAttentionWrapper(d_in, d_out, context_length, 0.0, num_heads=2)
 # 在`nn.Module`中，有一个`__call__`方法被重写。
 # 当我们像函数一样调用模块实例（例如`sa_v1(inputs)`）时，
 # 实际上调用的是`__call__`方法， `__call__`方法内部会调用`forward`方法，
 # 同时还会处理一些其他事情（例如钩子、梯度记录等）。
 # 神经网络层本质是数学函数：y = f(x)
 # f(x) 比 f.forward(x) 更符合数学直觉
-context_vec = ca(batch)
-print("Context Vec:\n", context_vec)
+context_vecs = mha(batch)
+print("Context Vecs:\n", context_vecs)
