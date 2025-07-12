@@ -11,12 +11,12 @@ import torch.nn as nn
 # 2. 增加模型的容量：通过扩展维度（这里扩展到4倍）然后再压缩回来，实际上增加了模型的参数数量，使得模型能够学习更复杂的模式；
 # 总结就是：通过维度扩展-激活-压缩结构增强表达能力。
 class FeedForward(nn.Module):
-    def __init__(self, emd_dim):
+    def __init__(self, emb_dim):
         """
         初始化前馈神经网络层
 
         Args:
-            emd_dim (int): 输入张量的大小
+            emb_dim (int): 输入张量的大小
         """
         super().__init__()
 
@@ -36,9 +36,9 @@ class FeedForward(nn.Module):
         # 此外 ReLU 对负输入的输出为0，而GELU对负输入会输出一个小的非零值，
         # 意味着训练中收到负输入的神经元仍然可以参与学习，只是贡献程度不如正输入大。
         self.layers = nn.Sequential(
-            nn.Linear(emd_dim, 4 * emd_dim), # 第一个线性层：扩展维度
+            nn.Linear(emb_dim, 4 * emb_dim), # 第一个线性层：扩展维度
             nn.GELU(),  # 非线性激活函数
-            nn.Linear(4 * emd_dim, emd_dim), # 第二个线性层：压缩回原维度
+            nn.Linear(4 * emb_dim, emb_dim), # 第二个线性层：压缩回原维度
         )
 
     def forward(self, x):

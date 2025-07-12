@@ -7,19 +7,19 @@ import torch.nn as nn
 # 例如向量 [0.2133, 0.2394, 0.0000, 0.5198, 0.3297, 0.0000] 在归一化后
 # 转化为 [-0.0207,  0.1228, -1.1915,  1.6621,  0.6186, -1.1915]，均值为 0，方差和为 1。
 class LayerNorm(nn.Module):
-    def __init__(self, emd_dim):
+    def __init__(self, emb_dim):
         """
         初始化层归一化层
 
         Args:
-            emd_dim (int): 输入张量的大小
+            emb_dim (int): 输入张量的大小
         """
         super().__init__()
         # 用于数值稳定的小值，防止计算归一化时分母为 0
         self.eps = 1e-12
         # nn.Parameter 将张量标记为模型参数，使其在训练过程中能被优化器自动更新，缩放/偏移因子是可学习的
-        self.scale = nn.Parameter(torch.ones(emd_dim))
-        self.shift = nn.Parameter(torch.zeros(emd_dim))
+        self.scale = nn.Parameter(torch.ones(emb_dim))
+        self.shift = nn.Parameter(torch.zeros(emb_dim))
 
     def forward(self, x):
         # 层归一化的实现通常包括三个步骤：计算均值和方差、归一化、缩放和移位。
