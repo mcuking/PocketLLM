@@ -2,7 +2,7 @@ import tiktoken
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-class GPTDatasetV1(Dataset):
+class GPTDataset(Dataset):
     def __init__(self, txt, tokenizer, max_length, stride):
         self.input_ids = []
         self.target_ids = []
@@ -32,7 +32,7 @@ def create_dataloader(txt, batch_size=4, max_length=256, stride=128, shuffle=Tru
     # 初始化分词器
     tokenizer = tiktoken.get_encoding("gpt2")
     # 创建数据集
-    dataset = GPTDatasetV1(txt, tokenizer, max_length, stride)
+    dataset = GPTDataset(txt, tokenizer, max_length, stride)
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -88,4 +88,3 @@ print("Positional embeddings shape:\n", pos_embeddings.shape)
 input_embedding = token_embeddings + pos_embeddings
 print("Embedded input:\n", input_embedding)
 print("Embedded input shape:\n", input_embedding.shape)
-

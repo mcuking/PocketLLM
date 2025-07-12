@@ -1,9 +1,8 @@
 import torch
-from torch import nn
+import torch.nn as nn
 
-# 当我们定义一个PyTorch模型时，通常会继承`nn.Module`类
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_in, d_out, context_length, dropout, num_heads, qkv_bias=False):
+    def __init__(self, d_in, d_out, context_length, drop_rate, num_heads, qkv_bias=False):
         super().__init__()
         assert d_out % num_heads == 0, "d_out must be divisible by num_heads"
 
@@ -43,13 +42,13 @@ class MultiHeadAttention(nn.Module):
         # 在训练过程中，dropout 会随机丢弃一部分神经元的输出，
         # 以减少模型对特定神经元的依赖，从而提高模型的泛化能力。
         # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(drop_rate)
 
     # 我们在子类中定义`forward`方法，该方法描述了前向传播的计算过程。
     def forward(self, x):
         # 输入 x 的形状为 (batch_size, context_length, d_in)
         # 其中 batch_size 是批处理的大小，context_length 是上下文长度（句子中的词元数量），d_in 是输入词元向量的维度。
-        batch_size, context_length, d_in = x.shape
+        batch_size, context_length, _ = x.shape
 
         # 计算查询、键和值向量矩阵
         # 形状为 (batch_size, context_length, d_out)
@@ -124,38 +123,3 @@ class MultiHeadAttention(nn.Module):
         # 这里的 `contiguous()` 方法用于确保张量在内存中是连续的，这对于某些操作（如 `view`）是必要的  
         context_vec = context_vec.transpose(1, 2).contiguous().view(batch_size, context_length, self.d_out)
         return context_vec
-
-# 设置随机种子以保证结果可复现
-torch.manual_seed(123)
-
-inputs = torch.tensor(
-  [[0.43, 0.15, 0.89], # Your     (x^1)
-   [0.55, 0.87, 0.66], # journey  (x^2)
-   [0.57, 0.85, 0.64], # starts   (x^3)
-   [0.22, 0.58, 0.33], # with     (x^4)
-   [0.77, 0.25, 0.10], # one      (x^5)
-   [0.05, 0.80, 0.55]] # step     (x^6)
-)
-    
-# 将输入数据扩展为批处理（batch）的形式
-# 在实际应用中，我们通常会处理多个输入样本。
-# 例如，在自然语言处理任务中，一个批处理可能包含多个句子，每个句子都是一个独立的输入样本。
-# 此时 batch 的形状为 (batch_size, context_length, d_in)，
-# context_length 是上下文长度（句子中的词元数量），d_in 是输入向量的维度
-batch = torch.stack((inputs, inputs), dim=0)
-batch_size, context_length, d_in = batch.shape
-# d_out 是输出的上下文向量的维度
-# 在多头注意力机制中，d_out 通常是 num_heads 的倍数
-# 例如，如果 d_out=4 且 num_heads=2，则每个头的维度为 4 // 2 = 2，这意味着每个头将处理一个 2 维的向量。这样可以让模型在不同的子空间中学习不同的注意力模式。
-d_out, num_heads = 4, 2
-
-mha = MultiHeadAttention(d_in, d_out, context_length, 0.0, num_heads)
-
-# 在`nn.Module`中，有一个`__call__`方法被重写。
-# 当我们像函数一样调用模块实例（例如`sa_v1(inputs)`）时，
-# 实际上调用的是`__call__`方法， `__call__`方法内部会调用`forward`方法，
-# 同时还会处理一些其他事情（例如钩子、梯度记录等）。
-# 神经网络层本质是数学函数：y = f(x)
-# f(x) 比 f.forward(x) 更符合数学直觉
-context_vecs = mha(batch)
-print("Context Vecs:\n", context_vecs)
