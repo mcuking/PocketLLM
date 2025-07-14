@@ -1,10 +1,9 @@
-from argparse import ArgumentParser
+
 import json
-
+from argparse import ArgumentParser
 import torch
-import tiktoken
-
 from model.language_model import LanguageModel
+from utils.text_utils import text_to_token_ids, token_ids_to_text
 
 def generate_text(model, token_ids, max_new_tokens, context_length):
     """
@@ -47,9 +46,6 @@ def main(config):
     Arguments:
         --config (str): 模型配置参数文件路径
     """
-    # 加载编码器，默认为 gpt2
-    tokenizer = tiktoken.get_encoding("gpt2")
-
     # 设置随机种子以保证结果可复现
     torch.manual_seed(123)    
     with open(config) as f:
@@ -70,7 +66,7 @@ def main(config):
         # 将用户输入的文本转换为 token id
         # unsqueeze 方法用于在张量维度上增加一个维度，这里在第一个维度上增加一个维度，使得输入的形状为 (1, num_tokens)
         # 这里使用 unsqueeze 方法是因为模型要求输入的形状为 (batch_size, num_tokens)
-        token_ids = torch.tensor(tokenizer.encode(user_input)).unsqueeze(0)
+        token_ids = text_to_token_ids(user_input)
 
         # 使用模型生成文本，输入输出均为 token id
         output_ids = generate_text(
@@ -83,7 +79,7 @@ def main(config):
         # 将 token id 转换为文本并打印
         # squeeze 方法用于在张量维度上减少一个维度，这里在第一个维度上减少一个维度，使得输出的形状为 (num_tokens)
         # 这里使用 squeeze 方法是因为模型输出的形状为 (batch_size, num_tokens)，而我们只需要一个文本，因此需要减少一个维度
-        output_text = tokenizer.decode(output_ids.squeeze(0).tolist())
+        output_text = token_ids_to_text(output_ids)
         print(f"模型: {output_text}\n")
 
 if __name__ == "__main__":

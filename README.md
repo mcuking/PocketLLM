@@ -12,15 +12,16 @@ PocketLLM/
 │
 ├── model/                    # 模型定义
 │   ├── __init__.py
-│   ├── language_model.py     # 语言模型
-│   ├── transform_block.py    # Transformer 块
-│   ├── attention.py          # 多头注意力机制
+│   ├── attention.py          # 多头注意力
 │   ├── feed_forward.py       # 前馈神经网络
+│   ├── language_model.py     # 语言模型
 │   └── layer_norm.py         # 层归一化
+│   └── transform_block.py    # Transformer 块
 │
-├── utils/                    # 工具脚本
+├── utils/                    # 工具方法
 │   ├── __init__.py
-│   └── data_loader.py        # 数据加载器
+│   ├── data_loader.py        # 数据加载器
+│   └── text_utils.py         # 文本和 token id 互转方法
 │
 ├── generate.py               # 文本生成程序
 ├── README.md                 # 项目说明
