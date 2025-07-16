@@ -75,3 +75,32 @@ def calc_loss_batch(input_batch, target_batch, model, device):
         target_batch.flatten(0),
     )
     return loss
+
+def calc_loss_loader(data_loader, model, device, num_batches=None):
+    """
+    计算给定数据集的交叉熵损失（负平均对数概率），就是将数据集的每个 batch 的损失加起来，然后除以 batch 数量，求平均值。
+    :param data_loader: 数据集
+    :param model: 语言模型
+    :param device: 决定模型在 CPU 还是 GPU 上运行
+    :param num_batches: 计算损失时使用的批次数
+    :return: 损失值
+    """
+    total_loss = 0.
+    if len(data_loader) == 0:
+        return float("nan")
+    elif num_batches is None:
+        num_batches = len(data_loader)
+    else:
+        # 如果传入了 num_batches，需要确保 num_batches 不大于数据集的 batch 数量
+        num_batches = min(num_batches, len(data_loader))
+    for i, (input_batch, target_batch) in enumerate(data_loader):
+        if i < num_batches:
+            # 计算每个 batch 的损失 loss
+            loss = calc_loss_batch(input_batch, target_batch, model, device)
+            # 将数据集的每个 batch 的损失 loss 加起来
+            total_loss += loss.item()
+        else:
+            break
+    # 将数据集中所有 batch 的损失 loss 平均值
+    return total_loss / num_batches
+
