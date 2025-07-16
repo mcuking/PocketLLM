@@ -104,3 +104,25 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
     # 将数据集中所有 batch 的损失 loss 平均值
     return total_loss / num_batches
 
+def evaluate_model(model, train_loader, validate_loader, device, eval_iter):
+    """
+    计算模型在训练数据集/验证数据集损失
+    :param model: 语言模型
+    :param train_loader: 训练数据集
+    :param validate_loader: 验证数据集
+    :param device: 决定模型在 CPU 还是 GPU 上运行
+    :param eval_iter: 计算数据集损失时使用的批次数
+    :return: 评估结果
+    """
+    # 将模型设置为推断模式，以禁用 dropout，确保稳定且可复现的结果
+    model.eval()
+    # 禁用梯度跟踪，因为反向传播不需要计算损失梯度优化权重参数，以减少计算开销
+    with torch.no_grad():
+        # 计算训练数据集的损失
+        train_loss = calc_loss_loader(train_loader, model, device, eval_iter)
+        # 计算验证数据集的损失
+        validate_loss = calc_loss_loader(validate_loader, model, device, eval_iter)
+    # 将模型设置为训练模式
+    model.train()
+    # 返回评估结果
+    return train_loss, validate_loss
