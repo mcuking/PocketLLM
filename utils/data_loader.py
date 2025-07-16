@@ -3,6 +3,13 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 class LLMDataset(Dataset):
+    '''
+    用于加载文本数据集的类
+    txt: 文本数据
+    tokenizer: 分词器
+    max_length: 每个序列的最大长度
+    stride: 滑动窗口的步长 
+    '''
     def __init__(self, txt, tokenizer, max_length, stride):
         self.input_ids = []
         self.target_ids = []
