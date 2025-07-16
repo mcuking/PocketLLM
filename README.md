@@ -21,7 +21,8 @@ PocketLLM/
 ├── utils/                    # 工具方法
 │   ├── __init__.py
 │   ├── data_loader.py        # 数据加载器
-│   └── text_utils.py         # 文本和 token id 互转方法
+│   ├── text_utils.py         # 文本和 token id 互转方法
+│   └── train_utils.py        # 模型预训练/微调用到的公共方法
 │
 ├── generate.py               # 文本生成程序
 ├── README.md                 # 项目说明
