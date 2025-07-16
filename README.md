@@ -10,6 +10,9 @@ PocketLLM/
 ├── configs/                  # 模型配置文件目录
 │   └── ...
 │
+├── data/                     # 预训练数据
+│   └── ...
+│
 ├── model/                    # 模型定义
 │   ├── __init__.py
 │   ├── attention.py          # 多头注意力
@@ -22,9 +25,10 @@ PocketLLM/
 │   ├── __init__.py
 │   ├── data_loader.py        # 数据加载器
 │   ├── text_utils.py         # 文本和 token id 互转方法
-│   └── train_utils.py        # 模型预训练/微调用到的公共方法
+│   └── train_utils.py        # 模型预训练/微调用到的公共方法，如损失计算等
 │
 ├── generate.py               # 文本生成程序
+├── pretrain.py               # 预训练程序
 ├── README.md                 # 项目说明
 └── requirements.txt          # 依赖列表
 ```
@@ -53,16 +57,26 @@ uv pip install -r requirements.txt
 
 ### 预训练
 
-待完成
+```bash
+python pretrain.py --config ./configs/gpt2_config_124M.json
+```
 
 ### 文本生成
 
 ```bash
 python generate.py --config ./configs/gpt2_config_124M.json
+```
 
+对话内容如下：
+
+```bash
 >用户: 你好 
 >模型: 你好nexus Archangel pantady paragraph students
 ```
+
+### 微调
+
+待完成
 
 ## 参考资料
 
