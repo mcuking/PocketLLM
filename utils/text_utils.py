@@ -1,10 +1,6 @@
 import torch
-import tiktoken
 
-# 加载编码器，默认为 gpt2
-tokenizer = tiktoken.get_encoding("gpt2")
-
-def text_to_token_ids(text, tokenizer=tokenizer):
+def text_to_token_ids(text, tokenizer):
     '''
     将文本转换为 token id
     :param text: 文本
@@ -17,7 +13,7 @@ def text_to_token_ids(text, tokenizer=tokenizer):
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)
     return encoded_tensor
 
-def token_ids_to_text(token_ids, tokenizer=tokenizer):
+def token_ids_to_text(token_ids, tokenizer):
     '''
     将 token id 转换为文本
     :param token_ids: token id
