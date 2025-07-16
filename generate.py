@@ -47,20 +47,23 @@ def main(config):
     Arguments:
         --config (str): 模型配置参数文件路径
     """
+    # 设置随机种子以保证结果可复现
+    torch.manual_seed(123)
     # 加载编码器，默认为 gpt2
     tokenizer = tiktoken.get_encoding("gpt2")
 
-    # 设置随机种子以保证结果可复现
-    torch.manual_seed(123)    
+    ##############################
+    # 初始化模型
+    ##############################
     with open(config) as f:
         cfg = json.load(f)
-
-    # 初始化模型
     model = LanguageModel(cfg)
     # 切换为推断模式，将禁用 dropout 等只在训练时使用的功能
     model.eval()
 
-    # 交互式对话循环
+    ##############################
+    # 交互式对话
+    ##############################
     print("开始对话（输入'exit'退出）")
     while True:
         user_input = input("用户: ")
