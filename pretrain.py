@@ -53,6 +53,9 @@ def main(config):
     Arguments:
         --config (str): 模型配置参数文件路径
     """
+    with open(config) as f:
+        cfg = json.load(f)
+
     # 如果你有一台支持 CUDA 的 GPU 机器，那么大语言模型将自动在 GPU 上训练且不需要修改代码
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -96,15 +99,13 @@ def main(config):
     ##############################
     # 初始化模型
     ##############################
-    with open(config) as f:
-        cfg = json.load(f)
     model = LanguageModel(cfg)
     model.to(device)
 
     # 初始化优化器，优化器是用于更新模型权重参数的算法，这里使用 AdamW 算法
     optimizer = torch.optim.AdamW(
         model.parameters(), # .parameters()方法返回模型的所有可训练权重参数
-        lr=0.0004, # 学习率，即模型权重参数的更新步长
+        lr=0.0004, # 学习率，即模型权重参数的梯度下降步长的系数，决定具体变化快慢，即 w = w - lr * dL/dw
         weight_decay=0.1 # 权重衰减，即模型权重参数的 L2 正则化系数
     )
 
