@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 import torch
 from model.language_model import LanguageModel
 from utils.data_loader import create_dataloader
-from utils.train_utils import calc_loss_batch, calc_loss_loader
+from utils.train_utils import calc_loss_batch, calc_loss_loader, model_path
 
 def train_model(model, train_loader, validate_loader, optimizer, device, num_epochs, eval_freq, eval_iter):
     '''
@@ -115,7 +115,7 @@ def main(config):
     train_model(model, train_loader, validate_loader, optimizer, device, num_epochs=10, eval_freq=100, eval_iter=1)
 
     # 保存模型参数
-    torch.save(model.state_dict(), "model.pth")
+    torch.save(model.state_dict(), model_path)
 
 if __name__ == "__main__":
     """

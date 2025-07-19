@@ -1,10 +1,12 @@
-
+import sys
 import json
+from pathlib import Path
 from argparse import ArgumentParser
 import tiktoken
 import torch
 from model.language_model import LanguageModel
 from utils.text_utils import text_to_token_ids, token_ids_to_text
+from utils.train_utils import model_path
 
 def generate_text(model, token_ids, max_new_tokens, context_length, temperature=0.0, top_k=None):
     """
@@ -64,6 +66,11 @@ def main(config):
     Arguments:
         --config (str): 模型配置参数文件路径
     """
+    # 如果模型权重文件不存在，则抛错提示并退出程序
+    if not Path(model_path).exists():
+        print(f"模型权重文件 {model_path} 不存在，请先训练模型")
+        sys.exit()
+
     with open(config) as f:
         cfg = json.load(f)
 
@@ -75,7 +82,12 @@ def main(config):
     ##############################
     # 初始化模型
     ##############################
+    # 加载之前训练好的模型权重参数，weights_only=True 表示只加载模型参数，不加载优化器等状态信息
+    checkpoint = torch.load(model_path, weights_only=True)
+    # 创建模型
     model = LanguageModel(cfg)
+    # 将模型权重参数加载到模型中
+    model.load_state_dict(checkpoint)
     # 切换为推断模式，将禁用 dropout 等只在训练时使用的功能
     model.eval()
 
