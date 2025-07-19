@@ -6,7 +6,7 @@ import torch
 from model.language_model import LanguageModel
 from utils.text_utils import text_to_token_ids, token_ids_to_text
 
-def generate_text(model, token_ids, max_new_tokens, context_length):
+def generate_text(model, token_ids, max_new_tokens, context_length, temperature):
     """
     使用模型生成文本
     
@@ -15,6 +15,7 @@ def generate_text(model, token_ids, max_new_tokens, context_length):
         token_ids: 输入文本的 token ids 张量，形状为 (batch_size, num_tokens)
         max_new_tokens: 新生成的 token 最大数量
         context_length: 最大上下文长度
+        temperature: 温度参数，用于控制生成文本的随机性，值越大越随机，值越小越确定
     """
     for _ in range(max_new_tokens):
         # 将当前文本截断至支持的长度。如果大模型仅支持5个词元，如果输入文本长度为10，则只有最后5个词元会被用于输入文本
@@ -28,12 +29,19 @@ def generate_text(model, token_ids, max_new_tokens, context_length):
         # 使得形状从 (batch_size, num_tokens, vocab_size) 变为 (batch_size, vocab_size)
         logits = logits[:, -1, :]
 
-        # 将 logits 分数转换为概率分布，不会改变输入顺序
-        probabilities = torch.softmax(logits, dim=-1)
-
-        # argmax 方法用于返回张量中每个元素的最大值的索引，
-        # 这里返回的是概率最大的词元的 token id，形状为 (batch_size, 1)
-        next_token_id = torch.argmax(probabilities, dim=-1, keepdim=True)
+        if temperature > 0.0:
+            # 可以理解为当 temperature 越小，被除之后之前的概率差距会越大，越容易生成确定性的文本
+            # 而当 temperature 越大，被除之后之前的概率差距会越小，越容易生成随机性的文本
+            logits = logits / temperature
+            # 将 logits 分数转换为概率分布，不会改变输入顺序
+            probabilities = torch.softmax(logits, dim=-1)
+            # 使用 torch.multinomial 方法从概率分布中采样，返回形状为 (batch_size, 1) 的张量，表示每个样本的 token id
+            next_token_id = torch.multinomial(probabilities, num_samples=1)
+        else:
+            # 当禁用温度缩放时，就采用贪心解码，即选择概率最大的 token id 作为下一个 token
+            # argmax 方法用于返回张量中每个元素的最大值的索引，
+            # 这里返回的是概率最大的词元的 token id，形状为 (batch_size, 1)
+            next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
 
         # 将新生成的 token id 添加到文本末尾，继续下一个循环，生成下一个 token
         token_ids = torch.cat((token_ids, next_token_id), dim=-1)
@@ -81,7 +89,8 @@ def main(config):
             model=model,
             token_ids=token_ids,
             max_new_tokens=30,
-            context_length=cfg["context_length"]
+            context_length=cfg["context_length"],
+            temperature=0.9,
         )
 
         # 将 token id 转换为文本并打印
