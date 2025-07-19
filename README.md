@@ -72,9 +72,9 @@ python pretrain.py --config configs/gpt2_config_124M.json --data_path data/西�
 
 **注意：** 
 
-因为需要在个人电脑上进行预训练，所以默认使用 gpt2-124M 模型配置进行预训练，如果电脑配置较低。还可以将默认模型配置中的 context_length 调成 256。
+因为需要在个人电脑上进行预训练，所以默认使用 gpt2-124M 模型配置进行预训练，如果电脑配置较低。还可以将默认模型配置中的上下文长度 context_length 调成 256。
 
-另外仓库中提供的 `data/西游记.txt` 是数据较大，训练时间较长，可以选择其他较小的数据文件进行预训练。
+另外仓库中提供的预训练数据 `data/西游记.txt` 选择的是小说《西游记》最后两回内容。如果仍觉得训练时间较长，可以选择其他更小的数据集进行预训练。
 
 ### 输出示例
 
@@ -98,9 +98,9 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 | --- | --- | --- | --- |
 | `config` | 模型配置文件路径 | 否 | `configs/gpt2_config_124M.json` |
 | `model_path` | 模型权重文件路径 | 否 | `model.pth` |
-| `max_new_tokens` | 新生成的 token 最大数量 | 否 | 30 |
-| `temperature` | 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定 | 否 | 0.0 |
-| `top_k` | top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定 | 否 | None |
+| `max_new_tokens` | 新生成的 token 最大数量 | 否 | `100` |
+| `temperature` | 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定 | 否 | `0.0` |
+| `top_k` | top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定 | 否 | `None` |
 
 **注意：** 
 
@@ -109,8 +109,8 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 ### 输出示例
 
 ```bash
-用户: 你好 
-模型: 你好nexus Archangel pantady paragraph students
+用户: 师徒方登岸整理，
+模型: 师徒方登岸整理，下颈左边，沙崪福寺大小僧人，看见几株松树一项，一脚踏著老鼌者却叫道：“老鼋，好生走稳
 ```
 
 ## 分类微调

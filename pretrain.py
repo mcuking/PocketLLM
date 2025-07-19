@@ -113,14 +113,14 @@ def main(config, data_path, model_path):
     # 初始化优化器，优化器是用于更新模型权重参数的算法，这里使用 AdamW 算法
     optimizer = torch.optim.AdamW(
         model.parameters(), # .parameters()方法返回模型的所有可训练权重参数
-        lr=0.0004, # 学习率，即模型权重参数的梯度下降步长的系数，决定具体变化快慢，即 w = w - lr * dL/dw
+        lr=5e-4, # 学习率，即模型权重参数的梯度下降步长的系数，决定具体变化快慢，即 w = w - lr * dL/dw
         weight_decay=0.1 # 权重衰减，即模型权重参数的 L2 正则化系数
     )
 
     ##############################
     # 训练模型
     ##############################
-    train_model(model, train_loader, validate_loader, optimizer, device, num_epochs=10, eval_freq=100, eval_iter=1)
+    train_model(model, train_loader, validate_loader, optimizer, device, num_epochs=20, eval_freq=5, eval_iter=1)
 
     # 保存模型权重
     torch.save(model.state_dict(), model_path)

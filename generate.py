@@ -128,7 +128,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/gpt2_config_124M.json")
     parser.add_argument("--model_path", type=str, default="model.pth")
-    parser.add_argument("--max_new_tokens", type=int, default=30)
+    parser.add_argument("--max_new_tokens", type=int, default=100)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--top_k", type=int, default=None)
     args = parser.parse_args()
