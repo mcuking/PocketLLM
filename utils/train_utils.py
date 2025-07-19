@@ -1,8 +1,5 @@
 import torch
 
-# 模型权重文件路径
-model_path = "model.pth"
-
 def calc_loss_batch(input_batch, target_batch, model, device):
     """
     计算给定批次的交叉熵损失（负平均对数概率）

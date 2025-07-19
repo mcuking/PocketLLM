@@ -6,18 +6,17 @@ import tiktoken
 import torch
 from model.language_model import LanguageModel
 from utils.text_utils import text_to_token_ids, token_ids_to_text
-from utils.train_utils import model_path
 
-def generate_text(model, token_ids, max_new_tokens, context_length, temperature=0.0, top_k=None):
+def generate_text(model, context_length, token_ids, max_new_tokens, temperature, top_k):
     """
     使用模型生成文本
     
     Args:
         model: 语言模型
+        context_length: 最大上下文长度
         token_ids: 输入文本的 token ids 张量，形状为 (batch_size, num_tokens)
         max_new_tokens: 新生成的 token 最大数量
-        context_length: 最大上下文长度
-        temperature: 温度参数，用于控制生成文本的随机性，值越大越随机，值越小越确定
+        temperature: 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定
         top_k: top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定
     """
     for _ in range(max_new_tokens):
@@ -59,14 +58,18 @@ def generate_text(model, token_ids, max_new_tokens, context_length, temperature=
     return token_ids
 
 
-def main(config):
+def main(config, model_path, max_new_tokens, temperature, top_k):
     """
     初始化大模型并执行文本生成
 
-    Arguments:
+    Args:
         --config (str): 模型配置参数文件路径
+        --model_path (str): 模型权重文件路径
+        --max_new_tokens (int): 新生成的 token 最大数量
+        --temperature (float): 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定
+        --top_k (int): top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定
     """
-    # 如果模型权重文件不存在，则抛错提示并退出程序
+    # 如果模型权重文件不存在，则提示并退出程序
     if not Path(model_path).exists():
         print(f"模型权重文件 {model_path} 不存在，请先训练模型")
         sys.exit()
@@ -83,11 +86,11 @@ def main(config):
     # 初始化模型
     ##############################
     # 加载之前训练好的模型权重参数，weights_only=True 表示只加载模型参数，不加载优化器等状态信息
-    checkpoint = torch.load(model_path, weights_only=True)
+    static_dict = torch.load(model_path, weights_only=True)
     # 创建模型
     model = LanguageModel(cfg)
     # 将模型权重参数加载到模型中
-    model.load_state_dict(checkpoint)
+    model.load_state_dict(static_dict)
     # 切换为推断模式，将禁用 dropout 等只在训练时使用的功能
     model.eval()
 
@@ -108,11 +111,11 @@ def main(config):
         # 使用模型生成文本，输入输出均为 token id
         output_ids = generate_text(
             model=model,
-            token_ids=token_ids,
-            max_new_tokens=30,
             context_length=cfg["context_length"],
-            temperature=0.9,
-            top_k=5
+            token_ids=token_ids,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_k=top_k
         )
 
         # 将 token id 转换为文本并打印
@@ -122,13 +125,11 @@ def main(config):
         print(f"模型: {output_text}\n")
 
 if __name__ == "__main__":
-    """
-    命令行工具
-
-    Arguments:
-        --config (str): 模型配置参数文件路径
-    """
     parser = ArgumentParser()
-    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--config", type=str, default="configs/gpt2_config_124M.json")
+    parser.add_argument("--model_path", type=str, default="model.pth")
+    parser.add_argument("--max_new_tokens", type=int, default=30)
+    parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument("--top_k", type=int, default=None)
     args = parser.parse_args()
-    main(args.config)
+    main(args.config, args.model_path, args.max_new_tokens, args.temperature, args.top_k)

@@ -1,9 +1,11 @@
+import sys
 import json
+from pathlib import Path
 from argparse import ArgumentParser
 import torch
 from model.language_model import LanguageModel
 from utils.data_loader import create_dataloader
-from utils.train_utils import calc_loss_batch, calc_loss_loader, model_path
+from utils.train_utils import calc_loss_batch, calc_loss_loader
 
 def train_model(model, train_loader, validate_loader, optimizer, device, num_epochs, eval_freq, eval_iter):
     '''
@@ -46,13 +48,20 @@ def train_model(model, train_loader, validate_loader, optimizer, device, num_epo
                 print(f"Ep {epoch+1} (Step {global_step:06d}): "
                       f"Train loss {train_loss:.3f}, Validate loss {validate_loss:.3f}")
 
-def main(config):
+def main(config, data_path, model_path):
     """
     初始化大模型并进行模型训练
 
-    Arguments:
+    Args:
         --config (str): 模型配置参数文件路径
+        --data_path (str): 用于预训练的原始数据文件路径
+        --model_path (str): 预训练后保存模型权重文件路径
     """
+    # 如果用于预训练的原始数据文件不存在，则提示并退出程序
+    if not Path(data_path).exists():
+        print(f"用于预训练的原始数据文件 {data_path} 不存在")
+        sys.exit()
+
     with open(config) as f:
         cfg = json.load(f)
 
@@ -65,8 +74,7 @@ def main(config):
     ##############################
     # 准备数据集
     ##############################
-    file_path = "data/西游记.txt"
-    with open(file_path, "r", encoding="utf-8") as file:
+    with open(data_path, "r", encoding="utf-8") as file:
         text_data = file.read()
 
     # 切分训练集和验证集，这里将 90% 的数据作为训练集，10% 的数据作为验证集
@@ -114,17 +122,13 @@ def main(config):
     ##############################
     train_model(model, train_loader, validate_loader, optimizer, device, num_epochs=10, eval_freq=100, eval_iter=1)
 
-    # 保存模型参数
+    # 保存模型权重
     torch.save(model.state_dict(), model_path)
 
 if __name__ == "__main__":
-    """
-    命令行工具
-
-    Arguments:
-        --config (str): 模型配置参数文件路径
-    """
     parser = ArgumentParser()
-    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--config", type=str, default="configs/gpt2_config_124M.json")
+    parser.add_argument("--data_path", type=str, default="data/西游记.txt")
+    parser.add_argument("--model_path", type=str, default="model.pth")
     args = parser.parse_args()
-    main(args.config)
+    main(args.config, args.data_path, args.model_path)
