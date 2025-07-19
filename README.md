@@ -36,18 +36,20 @@ PocketLLM/
 ## 安装
 
 ```bash
+# 安装 uv，可参考官方文档：
+https://github.com/astral-sh/uv?tab=readme-ov-file#installation
+
 # 克隆仓库
 git clone https://github.com/mcuking/PocketLLM.git
-cd LLMs-from-scratch
-
-## 确保 python 版本为 3.11，例如 macOS 系统
-brew install python@3.11 # macOS
+cd PocketLLM
 
 # 创建虚拟环境
-uv venv --python=python3.11
+uv venv --python 3.12
 
 # 激活虚拟环境
-source .venv/bin/activate # macOS
+source .venv/bin/activate # Unix/macOS 系统
+# Windows 系统使用：
+# .venv\Scripts\activate
 
 # 安装依赖
 uv pip install -r requirements.txt
