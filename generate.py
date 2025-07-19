@@ -6,7 +6,7 @@ import torch
 from model.language_model import LanguageModel
 from utils.text_utils import text_to_token_ids, token_ids_to_text
 
-def generate_text(model, token_ids, max_new_tokens, context_length, temperature):
+def generate_text(model, token_ids, max_new_tokens, context_length, temperature=0.0, top_k=None):
     """
     使用模型生成文本
     
@@ -16,6 +16,7 @@ def generate_text(model, token_ids, max_new_tokens, context_length, temperature)
         max_new_tokens: 新生成的 token 最大数量
         context_length: 最大上下文长度
         temperature: 温度参数，用于控制生成文本的随机性，值越大越随机，值越小越确定
+        top_k: top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定
     """
     for _ in range(max_new_tokens):
         # 将当前文本截断至支持的长度。如果大模型仅支持5个词元，如果输入文本长度为10，则只有最后5个词元会被用于输入文本
@@ -28,6 +29,14 @@ def generate_text(model, token_ids, max_new_tokens, context_length, temperature)
         # 因为模型会为每个 token 生成一个 logits，而我们只需要最后一个 token 的 logits，所以需要将维度减少一个维度，
         # 使得形状从 (batch_size, num_tokens, vocab_size) 变为 (batch_size, vocab_size)
         logits = logits[:, -1, :]
+
+        if top_k is not None:
+            # 先取出概率最高的 top_k 个 token
+            top_logits, _ = torch.topk(logits, top_k)
+            # 然后取这些 token 中最小的概率值
+            min_value = top_logits[:, -1]
+            # 将小于这个概率值的 token 的概率置为负无穷，下面 softmax/argmax 时这些 token 的概率会变为 0
+            logits = torch.where(logits < min_value, -torch.inf, logits)
 
         if temperature > 0.0:
             # 可以理解为当 temperature 越小，被除之后之前的概率差距会越大，越容易生成确定性的文本
@@ -91,6 +100,7 @@ def main(config):
             max_new_tokens=30,
             context_length=cfg["context_length"],
             temperature=0.9,
+            top_k=5
         )
 
         # 将 token id 转换为文本并打印
