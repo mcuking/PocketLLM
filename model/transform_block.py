@@ -15,7 +15,7 @@ class TransformBlock(nn.Module):
             qkv_bias=cfg["qkv_bias"]
         )
 
-        self.ff = FeedForward(cfg["emb_dim"])
+        self.ffn = FeedForward(cfg["emb_dim"])
         self.norm1 = LayerNorm(cfg["emb_dim"])
         self.norm2 = LayerNorm(cfg["emb_dim"])
         self.drop_shortcut = nn.Dropout(cfg["drop_rate"])
@@ -43,7 +43,7 @@ class TransformBlock(nn.Module):
         # 层归一化，使得每一层的输出被调整到合适的范围（零均值和单位方差，即均值为 0 方差和为 1）
         x = self.norm2(x)
         # 前馈神经网络层，通过维度扩展-激活-压缩结构增强表达能力
-        x = self.ff(x)
+        x = self.ffn(x)
         # dropout层，避免过拟合
         x = self.drop_shortcut(x)
         # 残差连接
