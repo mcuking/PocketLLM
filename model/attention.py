@@ -6,11 +6,11 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
         assert d_out % num_heads == 0, "d_out must be divisible by num_heads"
 
-        # d_out 是输出的上下文向量的维度，num_heads 是注意力头的数量，num_dim 是每个头的维度
+        # d_out 是输出的上下文向量的维度，num_heads 是注意力头的数量，head_dim 是每个头的维度
         # 例如，如果 d_out=8 且 num_heads=2，则每个头的维度为 8 // 2 = 4，这意味着每个头将处理一个 4 维的向量。
         self.d_out = d_out
         self.num_heads = num_heads
-        self.num_dim = d_out // num_heads
+        self.head_dim = d_out // num_heads
 
         # 生成三个权重矩阵：
         # 查询矩阵Wq：表示“我需要什么信息“
@@ -26,6 +26,15 @@ class MultiHeadAttention(nn.Module):
         self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
 
+        # 输出线性变换层
+        self.out_proj = nn.Linear(d_out, d_out)
+
+        # dropout 是一种深度学习中的正则化技术，用于防止过拟合。
+        # 在训练过程中，dropout 会随机丢弃一部分神经元的输出，
+        # 以减少模型对特定神经元的依赖，从而提高模型的泛化能力。
+        # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
+        self.dropout = nn.Dropout(drop_rate)
+
         # 掩码（mask）用于屏蔽某些位置的注意力分数
         # 例如，对于一个3x3的矩阵，`torch.triu(torch.ones(3,3), diagonal=1)`会得到：
         # [[0, 1, 1],
@@ -33,16 +42,9 @@ class MultiHeadAttention(nn.Module):
         #  [0, 0, 0]]
         # 其中 `diagonal=1`表示从主对角线向上偏移1的位置开始（即不包括主对角线）。
         # 所以主对角线上方的元素（包括对角线上面的一条）会被保留
-        mask = torch.triu(torch.ones(context_length, context_length), diagonal=1)
         # 在这里，我们使用 `register_buffer` 将掩码注册为模型的一个缓冲区。
         # 缓冲区会和模型一起自动移动到适当的设备（如GPU或CPU），无需手动确保这些张量和模型参数在同一设备上，从而避免设备不匹配的错误
-        self.register_buffer("mask", mask)
-
-        # dropout 是一种深度学习中的正则化技术，用于防止过拟合。
-        # 在训练过程中，dropout 会随机丢弃一部分神经元的输出，
-        # 以减少模型对特定神经元的依赖，从而提高模型的泛化能力。
-        # 需要注意：仅在训练过程中使用 dropout，在推理（测试）阶段不使用。
-        self.dropout = nn.Dropout(drop_rate)
+        self.register_buffer("mask", torch.triu(torch.ones(context_length, context_length), diagonal=1))
 
     # 我们在子类中定义`forward`方法，该方法描述了前向传播的计算过程。
     def forward(self, x):
@@ -57,17 +59,17 @@ class MultiHeadAttention(nn.Module):
         keys = self.W_key(x)
         values = self.W_value(x)
 
-        # 将查询、键和值向量矩阵的形状从 (batch_size, num_tokens, d_out) 转换为 (batch_size, num_tokens, num_heads, num_dim)
-        # 这里的 num_heads 是注意力头的数量，num_dim 是每个头的维度。
+        # 将查询、键和值向量矩阵的形状从 (batch_size, num_tokens, d_out) 转换为 (batch_size, num_tokens, num_heads, head_dim)
+        # 这里的 num_heads 是注意力头的数量，head_dim 是每个头的维度。
         # 这种转换是为了将每个查询、键和值向量矩阵分成多个头，以便在多头注意力机制中并行计算注意力。
         # 例如，如果 d_out=8 且 num_heads=2，则每个查询、键和值向量将被分成两个头，每个头的维度为 8 // 2 = 4。这样可以让模型在不同的子空间中学习不同的注意力模式。
         # 这里的 `view` 方法用于改变张量的形状，`view` 方法不会复制数据，而是返回一个新的张量视图，这个视图与原始张量共享相同的数据内存。
-        queries = queries.view(batch_size, num_tokens, self.num_heads, self.num_dim)
-        keys = keys.view(batch_size, num_tokens, self.num_heads, self.num_dim)
-        values = values.view(batch_size, num_tokens, self.num_heads, self.num_dim)
+        queries = queries.view(batch_size, num_tokens, self.num_heads, self.head_dim)
+        keys = keys.view(batch_size, num_tokens, self.num_heads, self.head_dim)
+        values = values.view(batch_size, num_tokens, self.num_heads, self.head_dim)
 
         # 将查询、键和值向量矩阵的张量形状
-        # 从 (batch_size, num_tokens, num_heads, num_dim) 转换为 (batch_size, num_heads, num_tokens, num_dim)，
+        # 从 (batch_size, num_tokens, num_heads, head_dim) 转换为 (batch_size, num_heads, num_tokens, head_dim)，
         # 以便在多头注意力机制中并行计算注意力。 
         queries = queries.transpose(1, 2)  
         keys = keys.transpose(1, 2)
@@ -76,8 +78,8 @@ class MultiHeadAttention(nn.Module):
         # 计算注意力分数
         # 注意力分数是通过查询向量和键向量的点积计算得到的，形状为 (batch_size, num_heads, num_tokens, num_tokens)
         # queries @ keys.transpose(2, 3) 相当于
-        # 形状为 (batch_size, num_heads, num_tokens, num_dim) 的查询向量与
-        # 形状为 (batch_size, num_heads, num_dim, num_tokens) 的键向量进行矩阵乘法，
+        # 形状为 (batch_size, num_heads, num_tokens, head_dim) 的查询向量与
+        # 形状为 (batch_size, num_heads, head_dim, num_tokens) 的键向量进行矩阵乘法，
         # 这样可以得到一个形状为 (batch_size, num_heads, num_tokens, num_tokens) 的张量，只会在最后两个维度进行矩阵乘法。
         attn_scores = queries @ keys.transpose(2, 3)
 
@@ -107,17 +109,26 @@ class MultiHeadAttention(nn.Module):
         attn_weights = self.dropout(attn_weights)
 
         # 计算上下文向量
-        # 上下文向量是注意力权重和值向量的加权和，形状为 (batch_size, num_heads, num_tokens, num_dim) 
+        # 上下文向量是注意力权重和值向量的加权和，形状为 (batch_size, num_heads, num_tokens, head_dim) 
         # （矩阵乘法除了可以理解为一个矩阵的行乘以另一个矩阵的列，还可以理解为加权和，第一个矩阵的行中的每个值表示第二个矩阵的对应行的权重，矩阵相乘相当于计算加权和）
         # attn_weights @ values 相当于
         # 形状为 (batch_size, num_heads, num_tokens, num_tokens) 的注意力权重与
-        # 形状为 (batch_size, num_heads, num_tokens, num_dim) 的值向量进行矩阵乘法，
-        # 这样可以得到一个形状为 (batch_size, num_heads, num_tokens, num_dim) 的张量。
+        # 形状为 (batch_size, num_heads, num_tokens, head_dim) 的值向量进行矩阵乘法，
+        # 这样可以得到一个形状为 (batch_size, num_heads, num_tokens, head_dim) 的张量。
         context_vec = attn_weights @ values
 
-        # 先将上下文向量的形状从 (batch_size, num_heads, num_tokens, num_dim) 转换为 (batch_size, num_tokens, num_heads, num_dim) 
-        # 然后再将其转换为 (batch_size, num_tokens, d_out)，其中 d_out 是输出的上下文向量的维度，等于 num_heads * num_dim。
+        # 将上下文向量的形状从 (batch_size, num_heads, num_tokens, head_dim) 
+        # 转换为 (batch_size, num_tokens, num_heads, head_dim)
+        # 方便于后续的拼接操作
+        context_vec = context_vec.transpose(1, 2)
+
+        # 将上下文向量的形状从 (batch_size, num_tokens, num_heads, head_dim) 
+        # 转换为 (batch_size, num_tokens, d_out)，其中 d_out 是输出的上下文向量的维度，等于 num_heads * head_dim。
         # 这样可以将多个头的输出拼接在一起，形成最终的上下文向量。
         # 这里的 `contiguous()` 方法用于确保张量在内存中是连续的，这对于某些操作（如 `view`）是必要的  
-        context_vec = context_vec.transpose(1, 2).contiguous().view(batch_size, num_tokens, self.d_out)
+        context_vec = context_vec.reshape(batch_size, num_tokens, self.d_out)
+
+        # 最后，将上下文向量通过输出线性变换层，得到最终的上下文向量，形状为 (batch_size, num_tokens, d_out)
+        context_vec = self.out_proj(context_vec) 
+
         return context_vec
