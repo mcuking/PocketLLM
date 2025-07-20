@@ -6,6 +6,7 @@ import tiktoken
 import torch
 from model.language_model import LanguageModel
 from utils.text_utils import text_to_token_ids, token_ids_to_text
+from utils.train_utils import load_gpt2_weights_into_model
 
 def generate_text(model, context_length, token_ids, max_new_tokens, temperature, top_k):
     """
@@ -57,7 +58,6 @@ def generate_text(model, context_length, token_ids, max_new_tokens, temperature,
         token_ids = torch.cat((token_ids, next_token_id), dim=-1)
     return token_ids
 
-
 def main(config, model_path, max_new_tokens, temperature, top_k):
     """
     初始化大模型并执行文本生成
@@ -85,12 +85,17 @@ def main(config, model_path, max_new_tokens, temperature, top_k):
     ##############################
     # 初始化模型
     ##############################
-    # 加载之前训练好的模型权重参数，weights_only=True 表示只加载模型参数，不加载优化器等状态信息
-    static_dict = torch.load(model_path, weights_only=True)
     # 创建模型
     model = LanguageModel(cfg)
-    # 将模型权重参数加载到模型中
-    model.load_state_dict(static_dict)
+
+    if model_path.endswith("pytorch_model.bin"):
+        # 如果权重文件名为 pytorch_model.bin，表明是加载了 GPT-2 预训练权重，
+        # 需要使用 load_gpt2_weights_into_model 将 GPT-2 模型权重加载到自定义模型中
+        load_gpt2_weights_into_model(model, model_path)
+    else:
+        # 加载之前训练好的模型权重参数，weights_only=True 表示只加载模型参数，不加载优化器等状态信息
+        model.load_state_dict(torch.load(model_path, weights_only=True))
+
     # 切换为推断模式，将禁用 dropout 等只在训练时使用的功能
     model.eval()
 
@@ -128,7 +133,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/gpt2_config_124M.json")
     parser.add_argument("--model_path", type=str, default="model.pth")
-    parser.add_argument("--max_new_tokens", type=int, default=100)
+    parser.add_argument("--max_new_tokens", type=int, default=50)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--top_k", type=int, default=None)
     args = parser.parse_args()

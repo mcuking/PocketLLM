@@ -98,7 +98,7 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 | --- | --- | --- | --- |
 | `config` | 模型配置文件路径 | 否 | `configs/gpt2_config_124M.json` |
 | `model_path` | 模型权重文件路径 | 否 | `model.pth` |
-| `max_new_tokens` | 新生成的 token 最大数量 | 否 | `100` |
+| `max_new_tokens` | 新生成的 token 最大数量 | 否 | `50` |
 | `temperature` | 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定 | 否 | `0.0` |
 | `top_k` | top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定 | 否 | `None` |
 
@@ -112,6 +112,22 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 用户: 师徒方登岸整理，
 模型: 师徒方登岸整理，下颈左边，沙崪福寺大小僧人，看见几株松树一项，一脚踏著老鼌者却叫道：“老鼋，好生走稳
 ```
+
+### 使用 GPT2-medium 模型权重
+
+由于上面预训练使用的数据集有限，所以生成的文本质量不高，如果想生成质量更高的文本，可以使用 GPT2-medium 模型权重文件进行文本生成。而 GPT2 是使用 TersorFlow 训练的，如果直接加载 OpenAI 官网提供的权重文件到本项目的模型中会报错，需要转换成 PyTorch 格式才能使用。
+
+建议直接从 [https://huggingface.co/gpt2](https://huggingface.co/gpt2) 下载已经转为 PyTorch 格式的权重文件 `pytorch_model.bin` 到项目根目录即可，地址如下：
+
+[https://huggingface.co/gpt2-medium/resolve/main/pytorch_model.bin](https://huggingface.co/gpt2-medium/resolve/main/pytorch_model.bin)
+
+然后使用以下命令进行文本生成：
+
+```bash
+python generate.py --config configs/gpt2_config_355M.json --model_path pytorch_model.bin
+```
+
+程序中会调用 `load_gpt2_weights_into_model` 方法将权重文件加载到模型中，该方法主要解决 GPT2 和本项目模型的参数命名规范不同的问题。
 
 ## 分类微调
 
