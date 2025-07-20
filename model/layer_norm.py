@@ -18,8 +18,8 @@ class LayerNorm(nn.Module):
         # 用于数值稳定的小值，防止计算归一化时分母为 0
         self.eps = 1e-12
         # nn.Parameter 将张量标记为模型参数，使其在训练过程中能被优化器自动更新，缩放/偏移因子是可学习的
-        self.scale = nn.Parameter(torch.ones(emb_dim))
-        self.shift = nn.Parameter(torch.zeros(emb_dim))
+        self.weight = nn.Parameter(torch.ones(emb_dim))
+        self.bias = nn.Parameter(torch.zeros(emb_dim))
 
     def forward(self, x):
         # 层归一化的实现通常包括三个步骤：计算均值和方差、归一化、缩放和移位。
@@ -39,4 +39,4 @@ class LayerNorm(nn.Module):
         norm_x = (x - mean) / torch.sqrt(var + self.eps)
 
         # 3 缩放和移位
-        return self.scale * norm_x + self.shift
+        return self.weight * norm_x + self.bias
