@@ -1,6 +1,6 @@
 import torch
 
-def calc_loss_batch(input_batch, target_batch, model, device):
+def calc_loss_batch(input_batch, target_batch, model, device, task_type="generation"):
     """
     计算给定批次的交叉熵损失（负平均对数概率）
 
@@ -9,11 +9,18 @@ def calc_loss_batch(input_batch, target_batch, model, device):
         target_batch: 目标 token id 的 batch
         model: 语言模型
         device: 设备
+        task_type: 任务类型，例如生成任务或分类任务
     """
     # device 可以将数据转移到 GPU 上
     input_batch = input_batch.to(device)
     target_batch = target_batch.to(device)
-    logits = model(input_batch)
+    if task_type == "classification":
+        # 对于分类任务，只需要最后一个 token 的 logits
+        logits = model(input_batch)[:, -1, :]
+    else:
+        # 对于生成任务，使用整个输入序列的 logits
+        # 默认为生成任务
+        logits = model(input_batch)
 
     # 计算损失 loss 过程：
     # target_batch 的形状为 (batch_size, num_tokens)
@@ -69,15 +76,20 @@ def calc_loss_batch(input_batch, target_batch, model, device):
     # 在实践中，“交叉熵”和“负平均对数概率”这两个术语是相关的，且经常可以互换使用。
     #
     # pytorch 中有一个内置的 cross_entropy 函数，该函数可以为我们处理上述所有步骤，因此我们只需要调用该函数即可。
-    loss = torch.nn.functional.cross_entropy(
-        # 抹平第 0 维即 batch_size 维，将 logits 的形状从 (batch_size, num_tokens, vocab_size) 转换为 (batch_size * num_tokens, vocab_size)
-        logits.flatten(0, 1),
-        # 抹平第 0 维即 batch_size 维，将 target_batch 的形状从 (batch_size, num_tokens) 转换为 (batch_size * num_tokens)
-        target_batch.flatten(0),
-    )
+    if task_type == "classification":
+        # 由于分类任务，上面已经将 num_tokens 维度抹平了，
+        # logits 的形状为 (batch_size, num_classes=2)，target_batch 的形状为 (batch_size)，因此可以直接计算交叉熵损失
+        loss = torch.nn.functional.cross_entropy(logits, target_batch)
+    else:
+        loss = torch.nn.functional.cross_entropy(
+            # 抹平第 0 维即 batch_size 维，将 logits 的形状从 (batch_size, num_tokens, vocab_size) 转换为 (batch_size * num_tokens, vocab_size)
+            logits.flatten(0, 1),
+            # 抹平第 0 维即 batch_size 维，将 target_batch 的形状从 (batch_size, num_tokens) 转换为 (batch_size * num_tokens)
+            target_batch.flatten(0),
+        )
     return loss
 
-def calc_loss_loader(data_loader, model, device, num_batches=None):
+def calc_loss_loader(data_loader, model, device, num_batches=None, task_type="generation"):
     """
     计算给定数据集的交叉熵损失（负平均对数概率），就是将数据集的每个 batch 的损失加起来，然后除以 batch 数量，求平均值。
 
@@ -86,6 +98,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
         model: 语言模型
         device: 决定模型在 CPU 还是 GPU 上运行
         num_batches: 计算损失时使用的批次数
+        task_type: 任务类型，例如生成任务或分类任务
     """
     total_loss = 0.
     if len(data_loader) == 0:
@@ -98,7 +111,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
     for i, (input_batch, target_batch) in enumerate(data_loader):
         if i < num_batches:
             # 计算每个 batch 的损失 loss
-            loss = calc_loss_batch(input_batch, target_batch, model, device)
+            loss = calc_loss_batch(input_batch, target_batch, model, device, task_type)
             # 将数据集的每个 batch 的损失 loss 加起来
             total_loss += loss.item()
         else:
