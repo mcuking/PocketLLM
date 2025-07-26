@@ -2,9 +2,11 @@ import sys
 import json
 from pathlib import Path
 from argparse import ArgumentParser
+import tiktoken
 import torch
+from torch.utils.data import DataLoader
 from model.language_model import LanguageModel
-from utils.data_loader import create_dataloader
+from utils.dataset_utils import TextDataset
 from utils.train_utils import calc_loss_batch, calc_loss_loader
 
 def train_model(model, train_loader, validate_loader, optimizer, device, num_epochs, eval_freq, eval_iter):
@@ -83,27 +85,40 @@ def main(config, data_path, model_path):
     train_data = text_data[:split_idx]
     validate_data = text_data[split_idx:]
 
+    # 初始化分词器
+    tokenizer = tiktoken.get_encoding("gpt2")
+
+    batch_size = 2 # 设置批次大小
+    num_workers = 0 # 设置数据加载器的多线程工作线程数
+
     # 准备训练数据集
-    train_loader = create_dataloader(
-        train_data,
-        batch_size=2,
+    train_dataset = TextDataset(
+        text=train_data,
+        tokenizer=tokenizer,
         max_length=cfg["context_length"],
         stride=cfg["context_length"],
-        drop_last=True,
-        shuffle=True,
-        num_workers=0
+    )
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size, # 每个批次的大小
+        shuffle=True, # 是否打乱数据顺序 防止模型过拟合
+        num_workers=num_workers, # 多线程加载数据的工作线程数
+        drop_last=True, # 是否丢弃最后一个不完整的batch
     )
 
-    validate_loader = create_dataloader(
-        validate_data,
-        batch_size=2,
+    validate_dataset = TextDataset(
+        text=validate_data,
+        tokenizer=tokenizer,
         max_length=cfg["context_length"],
         stride=cfg["context_length"],
-        drop_last=True,
-        shuffle=True,
-        num_workers=0
     )
-
+    validate_loader = DataLoader(
+        dataset=validate_dataset,
+        batch_size=batch_size, # 每个批次的大小
+        shuffle=True, # 是否打乱数据顺序 防止模型过拟合
+        num_workers=num_workers, # 多线程加载数据的工作线程数
+        drop_last=True, # 是否丢弃最后一个不完整的batch
+    )
     ##############################
     # 初始化模型
     ##############################

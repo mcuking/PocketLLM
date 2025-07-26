@@ -23,7 +23,7 @@ PocketLLM/
 │
 ├── utils/                    # 工具方法
 │   ├── __init__.py
-│   ├── data_loader.py        # 数据加载器
+│   ├── dataset_utils.py      # 定义各类数据集类
 │   ├── text_utils.py         # 文本和 token id 互转方法
 │   └── train_utils.py        # 模型预训练/微调用到的公共方法，如损失计算等
 │
