@@ -2,3 +2,5 @@
 __pycache__
 pytorch_model.bin
 model.pth
+train.csv
+validation.csv
