@@ -10,7 +10,7 @@ PocketLLM/
 ├── configs/                  # 模型配置文件目录
 │   └── ...
 │
-├── data/                     # 预训练数据
+├── data/                     # 用于预训练或微调的数据
 │   └── ...
 │
 ├── model/                    # 模型定义
@@ -60,21 +60,21 @@ uv pip install -r requirements.txt
 ### 使用示例
 
 ```bash
-python pretrain.py --config configs/gpt2_config_124M.json --data_path data/西游记.txt --model_path model.pth
+python pretrain.py --config configs/gpt2_config_124M.json --data_path data/pretrain/西游记.txt --model_path model.pth
 ```
 
 ### 参数
 | 参数 | 说明 | 是否必填 | 默认值 |
 | --- | --- | --- | --- |
 | `config` | 模型配置文件路径 | 否 | `configs/gpt2_config_124M.json` |
-| `data_path` | 用于预训练的原始数据文件路径 | 否 | `data/西游记.txt` |
+| `data_path` | 用于预训练的原始数据文件路径 | 否 | `data/pretrain/西游记.txt` |
 | `model_path` | 预训练后保存模型权重文件路径 | 否 | `model.pth` |
 
 **注意：** 
 
 因为需要在个人电脑上进行预训练，所以默认使用 gpt2-124M 模型配置进行预训练，如果电脑配置较低。还可以将默认模型配置中的上下文长度 context_length 调成 256。
 
-另外仓库中提供的预训练数据 `data/西游记.txt` 选择的是小说《西游记》最后两回内容。如果仍觉得训练时间较长，可以选择其他更小的数据集进行预训练。
+另外仓库中提供的预训练数据 `data/pretrain/西游记.txt` 选择的是小说《西游记》最后两回内容。如果仍觉得训练时间较长，可以选择其他更小的数据集进行预训练。
 
 ### 输出示例
 
@@ -102,9 +102,7 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 | `temperature` | 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定 | 否 | `0.0` |
 | `top_k` | top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定 | 否 | `None` |
 
-**注意：** 
-
-因为文本生成时使用的是预训练好的模型，所以需要使用和预训练时相同的模型配置文件。
+**注意：** 因为文本生成时使用的是预训练好的模型，所以需要使用和预训练时相同的模型配置文件。
 
 ### 输出示例
 
@@ -120,6 +118,8 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 建议直接从 [https://huggingface.co/gpt2](https://huggingface.co/gpt2) 下载已经转为 PyTorch 格式的权重文件 `pytorch_model.bin` 到项目根目录即可，地址如下：
 
 [https://huggingface.co/gpt2-medium/resolve/main/pytorch_model.bin](https://huggingface.co/gpt2-medium/resolve/main/pytorch_model.bin)
+
+**注意：** 下载后需要将文件重命名为 `pytorch_model.bin`
 
 然后使用以下命令进行文本生成：
 

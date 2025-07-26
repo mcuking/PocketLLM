@@ -50,7 +50,7 @@ def train_model(model, train_loader, validate_loader, optimizer, device, num_epo
 
 def main(config, data_path, model_path):
     """
-    初始化大模型并进行模型训练
+    初始化大模型并进行模型预训练
 
     Args:
         --config (str): 模型配置参数文件路径
@@ -128,7 +128,7 @@ def main(config, data_path, model_path):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/gpt2_config_124M.json")
-    parser.add_argument("--data_path", type=str, default="data/西游记.txt")
+    parser.add_argument("--data_path", type=str, default="data/pretrain/西游记.txt")
     parser.add_argument("--model_path", type=str, default="model.pth")
     args = parser.parse_args()
     main(args.config, args.data_path, args.model_path)
