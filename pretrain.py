@@ -6,8 +6,8 @@ import tiktoken
 import torch
 from torch.utils.data import DataLoader
 from model.language_model import LanguageModel
-from utils.dataset_utils import TextDataset
-from utils.train_utils import calc_loss_batch, calc_loss_loader
+from utils.dataset_loader import TextDataset
+from utils.metrics import calc_loss_batch, calc_loss_loader
 
 def train_model(model, train_loader, validate_loader, optimizer, device, num_epochs, eval_freq, eval_iter):
     '''
@@ -80,6 +80,7 @@ def main(config, data_path, model_path):
     ##############################
     # 准备数据集
     ##############################
+    # 读取原始数据集
     with open(data_path, "r", encoding="utf-8") as file:
         text_data = file.read()
 

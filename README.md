@@ -23,9 +23,10 @@ PocketLLM/
 │
 ├── utils/                    # 工具方法
 │   ├── __init__.py
-│   ├── dataset_utils.py      # 定义各类数据集类
-│   ├── text_utils.py         # 文本和 token id 互转方法
-│   └── train_utils.py        # 模型预训练/微调用到的公共方法，如损失计算等
+│   ├── dataset_loader.py     # 多种加载数据集的类
+│   ├── load_gpt2_weights.py  # 将 GPT-2 模型权重加载到自定义模型的方法
+│   ├── metrics.py            # 模型评估指标计算方法，例如计算损失值或预测准确率等
+│   └── text_tokenizer.py     # 文本和 token id 互转方法
 │
 ├── generate.py               # 文本生成程序
 ├── pretrain.py               # 预训练程序

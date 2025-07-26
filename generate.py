@@ -5,8 +5,8 @@ from argparse import ArgumentParser
 import tiktoken
 import torch
 from model.language_model import LanguageModel
-from utils.text_utils import text_to_token_ids, token_ids_to_text
-from utils.train_utils import load_gpt2_weights_into_model
+from utils.text_tokenizer import text_to_token_ids, token_ids_to_text
+from utils.load_gpt2_weights import load_gpt2_weights_into_model
 
 def generate_text(model, context_length, token_ids, max_new_tokens, temperature, top_k):
     """
