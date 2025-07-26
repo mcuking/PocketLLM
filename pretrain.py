@@ -11,13 +11,17 @@ from utils.train_utils import calc_loss_batch, calc_loss_loader
 
 def train_model(model, train_loader, validate_loader, optimizer, device, num_epochs, eval_freq, eval_iter):
     '''
-    用于大语言模型训练
+    模型预训练
+
     Args:
         model: 语言模型
         train_loader: 训练数据集
+        validate_loader: 验证数据集
         optimizer: 优化器
         device: 决定训练模型在 CPU 还是 GPU 上运行
         num_epochs: 训练轮次
+        eval_freq: 每隔多少个批次打印一次训练集和验证集损失
+        eval_iter: 计算数据集损失时使用的批次数
     '''
     global_step = -1
 

@@ -3,9 +3,10 @@ import torch
 def text_to_token_ids(text, tokenizer):
     '''
     将文本转换为 token id
-    :param text: 文本
-    :param tokenizer: 分词器
-    :return: token id
+
+    Args:
+        text: 文本
+        tokenizer: 分词器
     '''
     encoded = tokenizer.encode(text, allowed_special={'<|endoftext|>'})
     # unsqueeze 方法用于在张量维度上增加一个维度，这里在第一个维度上增加一个维度，使得输入的形状为 (1, num_tokens)
@@ -16,9 +17,10 @@ def text_to_token_ids(text, tokenizer):
 def token_ids_to_text(token_ids, tokenizer):
     '''
     将 token id 转换为文本
-    :param token_ids: token id
-    :param tokenizer: 分词器
-    :return: 文本
+
+    Args:
+        token_ids: token id
+        tokenizer: 分词器
     '''
     # 将 token id 转换为文本
     # squeeze 方法用于在张量维度上减少一个维度，这里在第一个维度上减少一个维度，使得输出的形状为 (num_tokens)

@@ -3,11 +3,12 @@ import torch
 def calc_loss_batch(input_batch, target_batch, model, device):
     """
     计算给定批次的交叉熵损失（负平均对数概率）
-    :param input_batch: 输入 token id 的 batch
-    :param target_batch: 目标 token id 的 batch
-    :param model: 语言模型
-    :param device: 设备
-    :return: 损失值
+
+    Args:
+        input_batch: 输入 token id 的 batch
+        target_batch: 目标 token id 的 batch
+        model: 语言模型
+        device: 设备
     """
     # device 可以将数据转移到 GPU 上
     input_batch = input_batch.to(device)
@@ -79,11 +80,12 @@ def calc_loss_batch(input_batch, target_batch, model, device):
 def calc_loss_loader(data_loader, model, device, num_batches=None):
     """
     计算给定数据集的交叉熵损失（负平均对数概率），就是将数据集的每个 batch 的损失加起来，然后除以 batch 数量，求平均值。
-    :param data_loader: 数据集
-    :param model: 语言模型
-    :param device: 决定模型在 CPU 还是 GPU 上运行
-    :param num_batches: 计算损失时使用的批次数
-    :return: 损失值
+
+    Args:
+        data_loader: 数据集
+        model: 语言模型
+        device: 决定模型在 CPU 还是 GPU 上运行
+        num_batches: 计算损失时使用的批次数
     """
     total_loss = 0.
     if len(data_loader) == 0:
@@ -104,35 +106,13 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
     # 将数据集中所有 batch 的损失 loss 平均值
     return total_loss / num_batches
 
-def evaluate_model(model, train_loader, validate_loader, device, eval_iter):
-    """
-    计算模型在训练数据集/验证数据集损失
-    :param model: 语言模型
-    :param train_loader: 训练数据集
-    :param validate_loader: 验证数据集
-    :param device: 决定模型在 CPU 还是 GPU 上运行
-    :param eval_iter: 计算数据集损失时使用的批次数
-    :return: 评估结果
-    """
-    # 将模型设置为推断模式，以禁用 dropout，确保稳定且可复现的结果
-    model.eval()
-    # 禁用梯度跟踪，因为反向传播不需要计算损失梯度优化权重参数，以减少计算开销
-    with torch.no_grad():
-        # 计算训练数据集的损失
-        train_loss = calc_loss_loader(train_loader, model, device, eval_iter)
-        # 计算验证数据集的损失
-        validate_loss = calc_loss_loader(validate_loader, model, device, eval_iter)
-    # 将模型设置为训练模式
-    model.train()
-    # 返回评估结果
-    return train_loss, validate_loss
-
 def load_gpt2_weights_into_model(model, model_path):
     """
     将 GPT-2 模型权重加载到自定义模型中
-    :param model: 自定义模型实例
-    :param model_path: GPT-2 模型路径
-    :return: 加载后的自定义模型
+
+    Args:
+        model: 自定义模型实例
+        model_path: GPT-2 模型路径
     """
     def assign(left, right):
         if left.shape != right.shape:
