@@ -23,6 +23,7 @@ PocketLLM/
 │
 ├── utils/                    # 工具方法
 │   ├── __init__.py
+│   ├── dataset_preprocess.py # 数据集预处理方法，例如创建平衡数据集
 │   ├── dataset_loader.py     # 多种加载数据集的类
 │   ├── load_gpt2_weights.py  # 将 GPT-2 模型权重加载到自定义模型的方法
 │   ├── metrics.py            # 模型评估指标计算方法，例如计算损失值或预测准确率等
