@@ -1,6 +1,6 @@
 .venv
 __pycache__
 pytorch_model.bin
-model.pth
+*.pth
 train.csv
 validation.csv
