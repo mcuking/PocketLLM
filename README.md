@@ -29,6 +29,7 @@ PocketLLM/
 │   ├── metrics.py            # 模型评估指标计算方法，例如计算损失值或预测准确率等
 │   └── text_tokenizer.py     # 文本和 token id 互转方法
 │
+├── class_finetune.py         # 分类微调程序
 ├── generate.py               # 文本生成程序
 ├── pretrain.py               # 预训练程序
 ├── README.md                 # 项目说明
@@ -68,7 +69,7 @@ python pretrain.py --config configs/gpt2_config_124M.json --data_path data/pretr
 ### 参数
 | 参数 | 说明 | 是否必填 | 默认值 |
 | --- | --- | --- | --- |
-| `config` | 模型配置文件路径 | 否 | `configs/gpt2_config_124M.json` |
+| `config` | 模型配置参数文件路径 | 否 | `configs/gpt2_config_124M.json` |
 | `data_path` | 用于预训练的原始数据文件路径 | 否 | `data/pretrain/西游记.txt` |
 | `model_path` | 预训练后保存模型权重文件路径 | 否 | `model.pth` |
 
@@ -98,7 +99,7 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 ### 参数
 | 参数 | 说明 | 是否必填 | 默认值 |
 | --- | --- | --- | --- |
-| `config` | 模型配置文件路径 | 否 | `configs/gpt2_config_124M.json` |
+| `config` | 模型配置参数文件路径 | 否 | `configs/gpt2_config_124M.json` |
 | `model_path` | 模型权重文件路径 | 否 | `model.pth` |
 | `max_new_tokens` | 新生成的 token 最大数量 | 否 | `50` |
 | `temperature` | 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定 | 否 | `0.0` |
@@ -113,9 +114,9 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 模型: 师徒方登岸整理，下颈左边，沙崪福寺大小僧人，看见几株松树一项，一脚踏著老鼌者却叫道：“老鼋，好生走稳
 ```
 
-### 使用 GPT2-medium 模型权重
+### 使用 GPT-2 medium 模型权重
 
-由于上面预训练使用的数据集有限，所以生成的文本质量不高，如果想生成质量更高的文本，可以使用 GPT2-medium 模型权重文件进行文本生成。而 GPT2 是使用 TersorFlow 训练的，如果直接加载 OpenAI 官网提供的权重文件到本项目的模型中会报错，需要转换成 PyTorch 格式才能使用。
+由于上面预训练使用的数据集有限，所以生成的文本质量不高，如果想生成质量更高的文本，可以使用 GPT-2 medium 模型权重文件进行文本生成。而 GPT-2 是使用 TersorFlow 训练的，如果直接加载 OpenAI 官网提供的权重文件到本项目的模型中会报错，需要转换成 PyTorch 格式才能使用。
 
 建议直接从 [https://huggingface.co/gpt2](https://huggingface.co/gpt2) 下载已经转为 PyTorch 格式的权重文件 `pytorch_model.bin` 到项目根目录即可，地址如下：
 
@@ -129,11 +130,43 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 python generate.py --config configs/gpt2_config_355M.json --model_path pytorch_model.bin
 ```
 
-程序中会调用 `load_gpt2_weights_into_model` 方法将权重文件加载到模型中，该方法主要解决 GPT2 和本项目模型的参数命名规范不同的问题。
+程序中会调用 `load_gpt2_weights_into_model` 方法将权重文件加载到模型中，该方法主要解决 GPT-2 和本项目模型的参数命名规范不同的问题。
 
 ## 分类微调
 
-待完成
+本节主要是对 GPT-2 medium 预训练模型进行微调，将输入文本分类为垃圾邮件/正常邮件。因此需要提前将 GPT-2 medium 预训练模型权重文件下载到本地，具体操作可参考上节内容。
+
+### 使用示例
+
+```bash
+python class_finetune.py --config configs/gpt2_config_355M.json --data_path data/class_finetune/SMSSpamCollection.csv --model_path review_classifier.pth --gpt2_model_path pytorch_model.bin --eval_mode False
+```
+
+### 参数
+| 参数 | 说明 | 是否必填 | 默认值 |
+| --- | --- | --- | --- |
+| `config` | 模型配置参数文件路径 | 否 | `configs/gpt2_config_355M.json` |
+| `data_path` | 用于分类微调的原始数据文件路径 | 否 | `data/class_finetune/SMSSpamCollection.csv` |
+| `model_path` | 分类微调后保存模型权重文件路径 | 否 | `review_classifier.pth` |
+| `gpt2_model_path` | GPT-2 模型权重文件路径| 否 | `pytorch_model.bin` |
+| `eval_mode` | 是否以评估模式运行模型 | 否 | `False` |
+
+### 分类预测
+
+当完成分类微调后，即可切换成评估模式使用，将输入文本分类为垃圾邮件/正常邮件。命令如下：
+
+```bash
+python class_finetune.py --config configs/gpt2_config_355M.json --eval_mode True
+```
+
+效果如下：
+
+```bash
+用户: You are a winner you have been specially selected to recieve $1000 cash.
+模型: spam
+用户: Hey, just wanted to check if we are still on for dinner tonight?
+模型: not spam
+```
 
 ## 指令微调
 

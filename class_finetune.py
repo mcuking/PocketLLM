@@ -57,8 +57,44 @@ def train_classifier(model, train_loader, validate_loader, optimizer, device, nu
                 validate_loss = calc_loss_loader(validate_loader, model, device, eval_iter, task_type=task_type)
                 print(f"Ep {epoch+1} (Step {global_step:06d}): "
                       f"Train loss {train_loss:.3f}, Validate loss {validate_loss:.3f}")
+                
+def class_finetune(input_text, model, tokenizer, device, max_length=None, pad_token_id=50256):
+    """
+    使用模型进行二元分类
 
-def main(config, data_path, model_path, gpt2_model_path):
+    Args:
+        input_text: 用户输入的文本
+        model: 语言模型
+        tokenizer: 分词器
+        device: 决定模型在 CPU 还是 GPU 上运行
+        max_length: 输入文本的最大长度，根据你的模型不同会限制最大能接受的输入长度
+        pad_token_id: 填充 token 的 id, 默认使用 GPT-2 的 token id 50256 即 <|endoftext|> 来填充
+    """
+    # 将用户输入的文本转换为 token id
+    # unsqueeze 方法用于在张量维度上增加一个维度，这里在第一个维度上增加一个维度，使得输入的形状为 (1, num_tokens)
+    # 这里使用 unsqueeze 方法是因为模型要求输入的形状为 (batch_size, num_tokens)
+    input_ids = tokenizer.encode(input_text, allowed_special={'<|endoftext|>'})
+
+    # 将当前文本截断至支持的长度。如果大模型仅支持5个词元，如果输入文本长度为10，则只有最后5个词元会被用于输入文本
+    input_ids = input_ids[-max_length:]
+
+    # 如果输入文本长度小于 max_length，则使用 pad_token_id 填充到 max_length
+    input_ids += [pad_token_id] * (max_length - len(input_ids))
+
+    # 增加 batch 维度
+    input_tersor = torch.tensor(input_ids, device=device).unsqueeze(0)
+
+    # 使用模型生成文本，输入输出均为 token id
+    with torch.no_grad():
+        logits = model(input_tersor)[:, -1, :]
+
+    # 将 logits 转换为概率分布，并使用了 argmax 方法找出概率最大的类别标签
+    predicted_label = torch.argmax(logits, dim=-1).item()
+
+    # 返回预测的类别标签，0 表示 "not spam"，1 表示 "spam"
+    return "spam" if predicted_label == 1 else "not spam"
+
+def main(config, data_path, model_path, gpt2_model_path, eval_mode):
     """
     初始化大模型并进行模型分类微调
 
@@ -67,16 +103,23 @@ def main(config, data_path, model_path, gpt2_model_path):
         --data_path (str): 用于分类微调的原始数据文件路径
         --model_path (str): 分类微调后保存模型权重文件路径
         --gpt2_model_path (str): GPT-2 模型权重文件路径
+        --eval_mode (bool): 是否以评估模式运行模型
     """
+    # 如果模型权重文件不存在，则提示并退出程序
+    if eval_mode and not Path(model_path).exists():
+        print(f"模型权重文件 {model_path} 不存在，请先进行模型分类微调")
+        sys.exit()
+
     # 如果用于分类微调的原始数据文件不存在，则提示并退出程序
-    if not Path(data_path).exists():
+    if not eval_mode and not Path(data_path).exists():
         print(f"用于分类微调的原始数据文件 {data_path} 不存在")
         sys.exit()
+
     # 如果用于分类微调的 GPT-2 模型权重文件不存在，则提示并退出程序
-    if not Path(gpt2_model_path).exists():
+    if not eval_mode and not Path(gpt2_model_path).exists():
         print(f"用于分类微调的 GPT-2 模型权重文件 {gpt2_model_path} 不存在")
         sys.exit()
-    
+
     with open(config) as f:
         cfg = json.load(f)
 
@@ -86,50 +129,51 @@ def main(config, data_path, model_path, gpt2_model_path):
     # 设置随机种子以保证结果可复现
     torch.manual_seed(123)
 
-    ##############################
-    # 准备数据集
-    ##############################
-    # 读取原始数据集
-    df = pd.read_csv(data_path, sep="\t", header=None, names=["Label", "Text"])
-    balanced_df = create_balanced_dataset(df) # 创建平衡数据集，使得 "spam" 和 "ham" 的数量相等
-    balanced_df["Label"] = balanced_df["Label"].map({"ham": 0, "spam": 1}) # 将 "Label" 列中的 "ham" 和 "spam" 转换为 0/1 的标签
-
-    # 切分训练集和验证集，这里将 90% 的数据作为训练集，10% 的数据作为验证集
-    train_ratio = 0.9
-    train_df, validation_df = random_split(balanced_df, train_ratio)
-    train_df.to_csv("train.csv", index=None)
-    validation_df.to_csv("validation.csv", index=None)
-
     # 初始化分词器
     tokenizer = tiktoken.get_encoding("gpt2")
 
-    batch_size = 8 # 设置批次大小
-    num_workers = 0 # 设置数据加载器的多线程工作线程数
-    
-    train_dataset = SpamDataset(
-        csv_file="train.csv",
-        max_length=None,
-        tokenizer=tokenizer
-    )
-    train_loader = DataLoader(
-        dataset=train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=num_workers,
-        drop_last=True,
-    )
+    ##############################
+    # 准备数据集
+    ##############################
+    if not eval_mode:
+        # 读取原始数据集
+        df = pd.read_csv(data_path, sep="\t", header=None, names=["Label", "Text"])
+        balanced_df = create_balanced_dataset(df) # 创建平衡数据集，使得 "spam" 和 "ham" 的数量相等
+        balanced_df["Label"] = balanced_df["Label"].map({"ham": 0, "spam": 1}) # 将 "Label" 列中的 "ham" 和 "spam" 转换为 0/1 的标签
 
-    validate_dataset = SpamDataset(
-        csv_file="validation.csv",
-        max_length=train_dataset.max_length,
-        tokenizer=tokenizer
-    )
-    validate_loader = DataLoader(
-        dataset=validate_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        drop_last=False,
-    )
+        # 切分训练集和验证集，这里将 90% 的数据作为训练集，10% 的数据作为验证集
+        train_ratio = 0.9
+        train_df, validation_df = random_split(balanced_df, train_ratio)
+        train_df.to_csv("train.csv", index=None)
+        validation_df.to_csv("validation.csv", index=None)
+
+        batch_size = 8 # 设置批次大小
+        num_workers = 0 # 设置数据加载器的多线程工作线程数
+        
+        train_dataset = SpamDataset(
+            csv_file="train.csv",
+            max_length=None,
+            tokenizer=tokenizer
+        )
+        train_loader = DataLoader(
+            dataset=train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            drop_last=True,
+        )
+
+        validate_dataset = SpamDataset(
+            csv_file="validation.csv",
+            max_length=train_dataset.max_length,
+            tokenizer=tokenizer
+        )
+        validate_loader = DataLoader(
+            dataset=validate_dataset,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            drop_last=False,
+        )
 
     ##############################
     # 初始化模型并加载 GPT-2 预训练权重
@@ -137,8 +181,9 @@ def main(config, data_path, model_path, gpt2_model_path):
     model = LanguageModel(cfg)
     model.to(device)
 
-    # 加载了 GPT-2 预训练权重，需要使用 load_gpt2_weights_into_model 将 GPT-2 模型权重加载到自定义模型中
-    load_gpt2_weights_into_model(model, gpt2_model_path)
+    if not eval_mode:
+        # 加载了 GPT-2 预训练权重，需要使用 load_gpt2_weights_into_model 将 GPT-2 模型权重加载到自定义模型中
+        load_gpt2_weights_into_model(model, gpt2_model_path)
 
     ##############################
     # 修改模型以适应分类微调
@@ -164,6 +209,29 @@ def main(config, data_path, model_path, gpt2_model_path):
 
     for params in model.final_norm.parameters():
         params.requires_grad = True
+
+    ##############################
+    # 评估模式，则直接加载模型权重并进行分类推理
+    ##############################
+    # 如果 eval_mode 为 True，则切换为评估模式
+    if eval_mode:
+        # 加载之前训练好的模型权重参数，weights_only=True 表示只加载模型参数，不加载优化器等状态信息
+        model.load_state_dict(torch.load(model_path, weights_only=True))
+
+        # 切换为推断模式，将禁用 dropout 等只在训练时使用的功能
+        model.eval()
+
+        print("开始对话（输入'exit'退出）")
+        while True:
+            input_text = input("用户: ")
+            if input_text.lower() == 'exit':
+                break
+
+            # 调用 class_finetune 函数进行分类微调
+            label = class_finetune(input_text, model, tokenizer, device, max_length=cfg["context_length"])
+            
+            print(f"模型: {label}\n")
+        return
     
     ##############################
     # 分类微调
@@ -187,5 +255,6 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type=str, default="data/class_finetune/SMSSpamCollection.csv")
     parser.add_argument("--model_path", type=str, default="review_classifier.pth")
     parser.add_argument("--gpt2_model_path", type=str, default="pytorch_model.bin")
+    parser.add_argument("--eval_mode", type=bool, default=False)
     args = parser.parse_args()
-    main(args.config, args.data_path, args.model_path, args.gpt2_model_path)
+    main(args.config, args.data_path, args.model_path, args.gpt2_model_path, args.eval_mode)
