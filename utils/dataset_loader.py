@@ -43,7 +43,7 @@ class SpamDataset(Dataset):
     text: 文本数据
     tokenizer: 分词器
     max_length: 每个序列的最大长度
-    pad_token_id: 填充 token 的 id，默认使用 GPT-2 的 token id 50256 即 <|endoftext|> 来填充
+    pad_token_id: 填充 token 的 id, 默认使用 GPT-2 的 token id 50256 即 <|endoftext|> 来填充
     '''
     def __init__(self, csv_file, tokenizer, max_length=None, pad_token_id=50256):
         self.data = pd.read_csv(csv_file)

@@ -77,6 +77,9 @@ def main(config, data_path, model_path):
     # 设置随机种子以保证结果可复现
     torch.manual_seed(123)
 
+    # 初始化分词器
+    tokenizer = tiktoken.get_encoding("gpt2")
+
     ##############################
     # 准备数据集
     ##############################
@@ -89,9 +92,6 @@ def main(config, data_path, model_path):
     split_idx = int(len(text_data) * train_ratio)
     train_data = text_data[:split_idx]
     validate_data = text_data[split_idx:]
-
-    # 初始化分词器
-    tokenizer = tiktoken.get_encoding("gpt2")
 
     batch_size = 2 # 设置批次大小
     num_workers = 0 # 设置数据加载器的多线程工作线程数
