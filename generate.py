@@ -8,25 +8,25 @@ from model.language_model import LanguageModel
 from utils.text_tokenizer import text_to_token_ids, token_ids_to_text
 from utils.load_gpt2_weights import load_gpt2_weights_into_model
 
-def generate_text(model, context_length, input_ids, max_new_tokens, temperature, top_k):
+def generate_text(model, context_length, token_ids, max_new_tokens, temperature, top_k):
     """
     使用模型生成文本
 
     Args:
         model: 语言模型
         context_length: 最大上下文长度
-        input_ids: 输入文本的 token ids 张量，形状为 (batch_size, num_tokens)
+        token_ids: 输入文本的 token ids 张量，形状为 (batch_size, num_tokens)
         max_new_tokens: 新生成的 token 最大数量
         temperature: 温度，用于控制生成文本的随机性，值越大越随机，值越小越确定
         top_k: top-k 采样，只从概率最高的 k 个 token 中采样，值越大越随机，值越小越确定
     """
     for _ in range(max_new_tokens):
         # 将当前文本截断至支持的长度。如果大模型仅支持5个词元，如果输入文本长度为10，则只有最后5个词元会被用于输入文本
-        input_ids = input_ids[:, -context_length:]
+        real_token_ids = token_ids[:, -context_length:]
 
         # no_grad 用于禁用梯度计算，只有在训练时才需要计算梯度来减小损失函数，禁用后可以加速计算减少内存占用
         with torch.no_grad():
-            logits = model(input_ids)
+            logits = model(real_token_ids)
         
         # 因为模型会为每个 token 生成一个 logits，而我们只需要最后一个 token 的 logits，所以需要将维度减少一个维度，
         # 使得形状从 (batch_size, num_tokens, vocab_size) 变为 (batch_size, vocab_size)
@@ -55,8 +55,8 @@ def generate_text(model, context_length, input_ids, max_new_tokens, temperature,
             next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
 
         # 将新生成的 token id 添加到文本末尾，继续下一个循环，生成下一个 token
-        output_ids = torch.cat((input_ids, next_token_id), dim=-1)
-    return output_ids
+        token_ids = torch.cat((token_ids, next_token_id), dim=-1)
+    return token_ids
 
 def main(config, model_path, max_new_tokens, temperature, top_k):
     """
@@ -118,7 +118,7 @@ def main(config, model_path, max_new_tokens, temperature, top_k):
         output_ids = generate_text(
             model=model,
             context_length=cfg["context_length"],
-            input_ids=input_ids,
+            token_ids=input_ids,
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_k=top_k
