@@ -10,43 +10,7 @@ from model.language_model import LanguageModel
 from utils.dataset_loader import SpamDataset
 from utils.load_gpt2_weights import load_gpt2_weights_into_model
 from utils.model_train import train_model
-from utils.dataset_preprocess import create_balanced_dataset
-                
-def classify_review(input_text, model, tokenizer, device, max_length=None, pad_token_id=50256):
-    """
-    使用模型进行二元分类
-
-    Args:
-        input_text: 用户输入的文本
-        model: 语言模型
-        tokenizer: 分词器
-        device: 决定模型在 CPU 还是 GPU 上运行
-        max_length: 输入文本的最大长度，根据你的模型不同会限制最大能接受的输入长度
-        pad_token_id: 填充 token 的 id, 默认使用 GPT-2 的 token id 50256 即 <|endoftext|> 来填充
-    """
-    # 将用户输入的文本转换为 token id
-    # unsqueeze 方法用于在张量维度上增加一个维度，这里在第一个维度上增加一个维度，使得输入的形状为 (1, num_tokens)
-    # 这里使用 unsqueeze 方法是因为模型要求输入的形状为 (batch_size, num_tokens)
-    input_ids = tokenizer.encode(input_text, allowed_special={'<|endoftext|>'})
-
-    # 将当前文本截断至支持的长度。如果大模型仅支持5个词元，如果输入文本长度为10，则只有最后5个词元会被用于输入文本
-    input_ids = input_ids[-max_length:]
-
-    # 如果输入文本长度小于 max_length，则使用 pad_token_id 填充到 max_length
-    input_ids += [pad_token_id] * (max_length - len(input_ids))
-
-    # 增加 batch 维度
-    input_tersor = torch.tensor(input_ids, device=device).unsqueeze(0)
-
-    # 使用模型生成文本，输入输出均为 token id
-    with torch.no_grad():
-        logits = model(input_tersor)[:, -1, :]
-
-    # 将 logits 转换为概率分布，并使用了 argmax 方法找出概率最大的类别标签
-    predicted_label = torch.argmax(logits, dim=-1).item()
-
-    # 返回预测的类别标签，0 表示 "not spam"，1 表示 "spam"
-    return "spam" if predicted_label == 1 else "not spam"
+from utils.model_inference import classify_review
 
 def main(config, data_path, model_path, gpt2_model_path, eval_mode):
     """
@@ -93,7 +57,9 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
     if not eval_mode:
         # 读取原始数据集
         df = pd.read_csv(data_path, sep="\t", header=None, names=["Label", "Text"])
-        df = create_balanced_dataset(df) # 创建平衡数据集，使得 "spam" 和 "ham" 的数量相等
+        num_spam = df[df["Label"] == "spam"].shape[0] # 计算 "spam" 实例的数量
+        ham_subset = df[df["Label"] == "ham"].sample(num_spam, random_state=123) # 随机抽样 "ham" 实例，使其数量与 "spam" 实例相等
+        df = pd.concat([ham_subset, df[df["Label"] == "spam"]]) # 合并 "ham" 子集和所有 "spam" 实例
         df["Label"] = df["Label"].map({"ham": 0, "spam": 1}) # 将 "Label" 列中的 "ham" 和 "spam" 转换为 0/1 的标签
         df = df.sample(frac=1, random_state=123).reset_index(drop=True) # 将整个 DataFrame 打乱顺序
 
@@ -155,7 +121,7 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
     for param in model.parameters():
         param.requires_grad = False
     
-    # 二元分类任务，因此我们只需替换最后的输出层即可，
+    # 评论分类任务，因此我们只需替换最后的输出层即可，
     # 该层原本是将输入映射为 50257 维的向量，即词汇表的大小，
     # 现在将其输出层作用改为映射为 2 维的向量，即 0/1 两类的分类器
     # 新的输出层的 requires_grad 默认为 True，意味着该层是模型中唯一在训练过程中会被更新的层
@@ -170,7 +136,7 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
         params.requires_grad = True
 
     ##############################
-    # 评估模式，则直接进行二元分类
+    # 评估模式，则直接进行评论分类
     ##############################
 
     # 如果 eval_mode 为 True，则切换为评估模式
@@ -187,9 +153,15 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
             if input_text.lower() == 'exit':
                 break
 
-            # 使用模型进行二元分类
-            label = classify_review(input_text, model, tokenizer, device, max_length=cfg["context_length"])
-            
+            # 使用模型进行分类评论
+            label = classify_review(
+                input_text=input_text, 
+                model=model, 
+                tokenizer=tokenizer,
+                device=device,
+                max_length=cfg["context_length"]
+            )
+
             print(f"模型: {label}\n")
         return
     
