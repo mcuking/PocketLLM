@@ -1,21 +1,20 @@
 import torch
 from torch.utils.data import Dataset
-import pandas as pd
 
 class TextDataset(Dataset):
     '''
     用于加载文本数据集的类
-    text: 文本数据
+    data: 字符串格式的文本数据
     tokenizer: 分词器
     max_length: 每个序列的最大长度
     stride: 滑动窗口的步长 
     '''
-    def __init__(self, text, tokenizer, max_length, stride):
+    def __init__(self, data, tokenizer, max_length, stride):
         self.input_ids = []
         self.target_ids = []
 
         # 将全部文本进行分词
-        token_ids = tokenizer.encode(text)
+        token_ids = tokenizer.encode(data)
         
         # 使用滑动窗口方法将文本划分为长度为max_length的重叠序列
         # stride为步长，决定了每个序列之间的重叠部分
@@ -40,13 +39,13 @@ class TextDataset(Dataset):
 class SpamDataset(Dataset):
     '''
     用于加载垃圾邮件数据集的类
-    text: 文本数据
+    data: pandas DataFrame 格式的数据集
     tokenizer: 分词器
     max_length: 每个序列的最大长度
     pad_token_id: 填充 token 的 id, 默认使用 GPT-2 的 token id 50256 即 <|endoftext|> 来填充
     '''
-    def __init__(self, csv_file, tokenizer, max_length=None, pad_token_id=50256):
-        self.data = pd.read_csv(csv_file)
+    def __init__(self, data, tokenizer, max_length=None, pad_token_id=50256):
+        self.data = data
 
         # 将文本数据编码为 token id
         self.encoded_texts = [

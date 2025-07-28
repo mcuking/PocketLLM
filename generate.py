@@ -84,8 +84,9 @@ def main(config, model_path, max_new_tokens, temperature, top_k):
     tokenizer = tiktoken.get_encoding("gpt2")
 
     ##############################
-    # 初始化模型
+    # 初始化模型并加载模型权重文件
     ##############################
+
     # 创建模型
     model = LanguageModel(cfg)
 
@@ -103,6 +104,7 @@ def main(config, model_path, max_new_tokens, temperature, top_k):
     ##############################
     # 交互式对话
     ##############################
+
     print("开始对话（输入'exit'退出）")
     while True:
         input_text = input("用户: ")
