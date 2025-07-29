@@ -12,7 +12,7 @@ from utils.load_gpt2_weights import load_gpt2_weights_into_model
 from utils.model_train import train_model
 from utils.model_inference import classify_review
 
-def main(config, data_path, model_path, gpt2_model_path, eval_mode):
+if __name__ == "__main__":
     """
     初始化模型并进行微调
 
@@ -23,6 +23,15 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
         --gpt2_model_path (str): GPT-2 模型权重文件路径
         --eval_mode (bool): 是否以评估模式运行模型
     """
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, default="configs/gpt2_config_355M.json")
+    parser.add_argument("--data_path", type=str, default="data/class_finetune/SMSSpamCollection.csv")
+    parser.add_argument("--model_path", type=str, default="review_classifier.pth")
+    parser.add_argument("--gpt2_model_path", type=str, default="pytorch_model.bin")
+    parser.add_argument("--eval_mode", type=bool, default=False)
+    args = parser.parse_args()
+    config, data_path, model_path, gpt2_model_path, eval_mode = vars(args).values()
+
     # 如果模型权重文件不存在，则提示并退出程序
     if eval_mode and not Path(model_path).exists():
         print(f"模型权重文件 {model_path} 不存在，请先进行模型微调")
@@ -144,7 +153,7 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
         # 加载之前训练好的模型权重参数，weights_only=True 表示只加载模型参数，不加载优化器等状态信息
         model.load_state_dict(torch.load(model_path, weights_only=True))
 
-        # 切换为推断模式，将禁用 dropout 等只在训练时使用的功能
+        # 切换为推理模式，将禁用 dropout 等只在训练时使用的功能
         model.eval()
 
         print("开始对话（输入'exit'退出）")
@@ -163,7 +172,7 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
             )
 
             print(f"模型: {label}\n")
-        return
+        sys.exit()
     
     ##############################
     # 微调并保存模型权重
@@ -181,13 +190,3 @@ def main(config, data_path, model_path, gpt2_model_path, eval_mode):
 
     # 保存模型权重
     torch.save(model.state_dict(), model_path)
-
-if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default="configs/gpt2_config_355M.json")
-    parser.add_argument("--data_path", type=str, default="data/class_finetune/SMSSpamCollection.csv")
-    parser.add_argument("--model_path", type=str, default="review_classifier.pth")
-    parser.add_argument("--gpt2_model_path", type=str, default="pytorch_model.bin")
-    parser.add_argument("--eval_mode", type=bool, default=False)
-    args = parser.parse_args()
-    main(args.config, args.data_path, args.model_path, args.gpt2_model_path, args.eval_mode)

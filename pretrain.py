@@ -9,7 +9,7 @@ from model.language_model import LanguageModel
 from utils.dataset_loader import TextDataset
 from utils.model_train import train_model
 
-def main(config, data_path, model_path):
+if __name__ == "__main__":
     """
     初始化大模型并进行模型预训练
 
@@ -18,6 +18,13 @@ def main(config, data_path, model_path):
         --data_path (str): 用于预训练的原始数据文件路径
         --model_path (str): 预训练后保存模型权重文件路径
     """
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, default="configs/gpt2_config_124M.json")
+    parser.add_argument("--data_path", type=str, default="data/pretrain/西游记.txt")
+    parser.add_argument("--model_path", type=str, default="model.pth")
+    args = parser.parse_args()
+    config, data_path, model_path = vars(args).values()
+
     # 如果用于预训练的原始数据文件不存在，则提示并退出程序
     if not Path(data_path).exists():
         print(f"用于预训练的原始数据文件 {data_path} 不存在")
@@ -104,11 +111,3 @@ def main(config, data_path, model_path):
 
     # 保存模型权重
     torch.save(model.state_dict(), model_path)
-
-if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default="configs/gpt2_config_124M.json")
-    parser.add_argument("--data_path", type=str, default="data/pretrain/西游记.txt")
-    parser.add_argument("--model_path", type=str, default="model.pth")
-    args = parser.parse_args()
-    main(args.config, args.data_path, args.model_path)
