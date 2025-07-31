@@ -107,7 +107,7 @@ if __name__ == "__main__":
     )
 
     # 训练模型
-    train_model(model, train_loader, validate_loader, optimizer, device, num_epochs=10, eval_freq=5, eval_iter=1, task_type="generation")
+    train_model(model, train_loader, validate_loader, optimizer, device, num_epochs=10, eval_freq=5, eval_iter=1, is_classification=False)
 
     # 保存模型权重
     torch.save(model.state_dict(), model_path)

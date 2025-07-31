@@ -1,6 +1,6 @@
 from .metrics import calc_loss_batch, calc_loss_loader
 
-def train_model(model, train_loader, validate_loader, optimizer, device, num_epochs, eval_freq, eval_iter, task_type):
+def train_model(model, train_loader, validate_loader, optimizer, device, num_epochs, eval_freq, eval_iter, is_classification=False):
     '''
     模型预训练/微调方法
 
@@ -13,7 +13,7 @@ def train_model(model, train_loader, validate_loader, optimizer, device, num_epo
         num_epochs: 训练轮次
         eval_freq: 每隔多少个批次打印一次训练集和验证集损失
         eval_iter: 计算数据集损失时使用的批次数
-        task_type: 任务类型，例如生成任务或分类任务
+        is_classification: 是否为分类任务，如果是，那么只取每个 batch 中的最后一个 token 的 logits 计算损失
     '''
     global_step = -1
 
@@ -28,7 +28,7 @@ def train_model(model, train_loader, validate_loader, optimizer, device, num_epo
             optimizer.zero_grad()
 
             # 计算当前批次的损失
-            loss = calc_loss_batch(input_batch, target_batch, model, device, task_type=task_type)
+            loss = calc_loss_batch(input_batch, target_batch, model, device, is_classification=is_classification)
 
             # 进行反向传播来计算损失梯度
             loss.backward()
@@ -41,7 +41,7 @@ def train_model(model, train_loader, validate_loader, optimizer, device, num_epo
             # 打印训练集/验证集损失
             if global_step % eval_freq == 0:
                 # 计算模型在训练数据集和验证数据集的损失
-                train_loss = calc_loss_loader(train_loader, model, device, eval_iter, task_type=task_type)
-                validate_loss = calc_loss_loader(validate_loader, model, device, eval_iter, task_type=task_type)
+                train_loss = calc_loss_loader(train_loader, model, device, eval_iter, is_classification=is_classification)
+                validate_loss = calc_loss_loader(validate_loader, model, device, eval_iter, is_classification=is_classification)
                 print(f"Ep {epoch+1} (Step {global_step:06d}): "
                       f"Train loss {train_loss:.3f}, Validate loss {validate_loss:.3f}")
