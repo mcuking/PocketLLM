@@ -7,33 +7,34 @@
 ```
 PocketLLM/
 │
-├── configs/                  # 模型配置文件目录
+├── configs/                       # 模型配置文件目录
 │   └── ...
 │
-├── data/                     # 用于预训练或微调的数据
+├── data/                          # 用于预训练或微调的数据
 │   └── ...
 │
-├── model/                    # 模型定义
+├── model/                         # 模型定义
 │   ├── __init__.py
-│   ├── attention.py          # 多头注意力
-│   ├── feed_forward.py       # 前馈神经网络
-│   ├── language_model.py     # 语言模型
-│   └── layer_norm.py         # 层归一化
-│   └── transform_block.py    # Transformer 块
+│   ├── attention.py               # 多头注意力
+│   ├── feed_forward.py            # 前馈神经网络
+│   ├── language_model.py          # 语言模型
+│   └── layer_norm.py              # 层归一化
+│   └── transform_block.py         # Transformer 块
 │
-├── utils/                    # 工具方法
+├── utils/                         # 工具方法
 │   ├── __init__.py
-│   ├── dataset_loader.py     # 多种加载数据集的类
-│   ├── load_gpt2_weights.py  # 将 GPT-2 模型权重加载到自定义模型的方法
-│   ├── metrics.py            # 模型评估指标计算方法，例如计算损失值或预测准确率等
-│   ├── model_inference.py    # 模型推理方法，例如生成文本/分类评论/执行指令等
-│   └── model_train.py        # 模型预训练/微调方法
+│   ├── dataset_loader.py          # 多种加载数据集的类
+│   ├── load_gpt2_weights.py       # 将 GPT-2 模型权重加载到自定义模型的方法
+│   ├── metrics.py                 # 模型评估指标计算方法，例如计算损失值或预测准确率等
+│   ├── model_inference.py         # 模型推理方法，例如生成文本/分类评论/执行指令等
+│   └── model_train.py             # 模型预训练/微调方法
 │
-├── class_finetune.py         # 分类微调程序
-├── generate.py               # 文本生成程序
-├── pretrain.py               # 预训练程序
-├── README.md                 # 项目说明
-└── requirements.txt          # 依赖列表
+├── class_finetune_inference.py    # 分类微调推理程序
+├── class_finetune_train.py        # 分类微调训练程序
+├── generate.py                    # 文本生成程序
+├── pretrain.py                    # 预训练程序
+├── README.md                      # 项目说明
+└── requirements.txt               # 依赖列表
 ```
 
 ## 安装
@@ -134,12 +135,12 @@ python generate.py --config configs/gpt2_config_355M.json --model_path pytorch_m
 
 ## 分类微调
 
-本节主要是对 GPT-2 medium 预训练模型进行微调，将输入文本分类为垃圾邮件/正常邮件。因此需要提前将 GPT-2 medium 预训练模型权重文件下载到本地，具体操作可参考上节内容。
-
 ### 使用示例
 
+本节主要是对 GPT-2 medium 预训练模型进行微调，将输入文本分类为垃圾/正常。因此需要提前将 GPT-2 medium 预训练模型权重文件下载到本地，具体操作可参考上节内容。然后执行下面的命令即可开启分类微调训练过程。
+
 ```bash
-python class_finetune.py --config configs/gpt2_config_355M.json --data_path data/class_finetune/SMSSpamCollection.csv --model_path review_classifier.pth --gpt2_model_path pytorch_model.bin --eval_mode False
+python class_finetune_train.py --config configs/gpt2_config_355M.json --data_path data/class_finetune/SMSSpamCollection.csv --model_path review_classifier.pth --gpt2_model_path pytorch_model.bin
 ```
 
 ### 参数
@@ -149,14 +150,13 @@ python class_finetune.py --config configs/gpt2_config_355M.json --data_path data
 | `data_path` | 用于分类微调的原始数据文件路径 | 否 | `data/class_finetune/SMSSpamCollection.csv` |
 | `model_path` | 分类微调后保存模型权重文件路径 | 否 | `review_classifier.pth` |
 | `gpt2_model_path` | GPT-2 模型权重文件路径| 否 | `pytorch_model.bin` |
-| `eval_mode` | 是否以评估模式运行模型 | 否 | `False` |
 
-### 分类预测
+### 输入文本分类
 
-当完成分类微调后，即可切换成评估模式使用，将输入文本分类为垃圾邮件/正常邮件。命令如下：
+当完成分类微调训练后，就可以使用该模型对输入文本进行分类。命令如下：
 
 ```bash
-python class_finetune.py --config configs/gpt2_config_355M.json --eval_mode True
+python class_finetune_inference.py --config configs/gpt2_config_355M.json --model_path review_classifier.pth
 ```
 
 效果如下：
