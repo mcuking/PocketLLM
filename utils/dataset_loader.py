@@ -25,10 +25,6 @@ class TextDataset(Dataset):
             self.input_ids.append(torch.tensor(input_chunks))
             self.target_ids.append(torch.tensor(target_chunks))
 
-    # 返回数据集的总长度
-    def __len__(self):
-        return len(self.input_ids)
-    
     # 返回数据集的指定行的数据
     def __getitem__(self, index):
         return (
@@ -36,9 +32,13 @@ class TextDataset(Dataset):
             self.target_ids[index]
         )
 
+    # 返回数据集的总长度
+    def __len__(self):
+        return len(self.input_ids)
+
 class SpamDataset(Dataset):
     '''
-    用于加载垃圾邮件数据集的类
+    用于加载分类微调数据集的类
     data: pandas DataFrame 格式的数据集
     tokenizer: 分词器
     max_length: 每个序列的最大长度
@@ -54,7 +54,11 @@ class SpamDataset(Dataset):
         ]
 
         if max_length is None:
-            self.max_length = self._longest_encoded_length()
+            # 获取数据集中最长的序列长度
+            self.max_length = max(
+                len(encoded_text) 
+                for encoded_text in self.encoded_texts
+            )
         else:
             self.max_length = max_length
             # 如果编码后的文本长度超过 max_length，则截断
@@ -72,20 +76,48 @@ class SpamDataset(Dataset):
             for encoded_text in self.encoded_texts
         ]
 
-    # 返回数据集中最长的序列长度
-    def _longest_encoded_length(self):
-        return max(
-            len(encoded_text) 
-            for encoded_text in self.encoded_texts
-        )
-
-    # 返回数据集的总长度
-    def __len__(self):
-        return len(self.encoded_texts)
-    
     # 返回数据集的指定行的数据
     def __getitem__(self, index):
         return (
             torch.tensor(self.encoded_texts[index], dtype=torch.long),
             torch.tensor(self.data.iloc[index]["Label"], dtype=torch.long)
         )
+
+    # 返回数据集的总长度
+    def __len__(self):
+        return len(self.encoded_texts)
+
+class InstructionDataset(Dataset):
+    '''
+    用于加载指令微调数据集的类
+
+    Args:
+        data: 字符串格式的文本数据
+        tokenizer: 分词器
+    '''
+    def __init__(self, data, tokenizer):
+        self.data = data
+
+        self.encoded_texts = [
+            tokenizer.encode(self.tranformInstructionToText(entry))
+            for entry in self.data
+        ]
+
+    # 返回数据集的指定行的数据
+    def __getitem__(self, index):
+        return self.encoded_texts[index]
+
+    # 返回数据集的总长度
+    def __len__(self):
+        return len(self.encoded_texts)
+    
+    # 将指令数据转换为文本格式
+    def tranformInstructionToText(self, entry):
+        instruction_text = (
+            "Below is an instruction that describes a task. "
+            "Write a response that appropriately completes the request."
+            f"\n\n### Instruction:\n{entry['instruction']}"
+        )
+        input_text = f"\n\n### Input:\n{entry['input']}" if entry['input'] else ""
+        response_text = f"\n\n### Response:\n{entry['output']}"
+        return instruction_text + input_text + response_text
