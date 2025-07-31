@@ -70,8 +70,8 @@ if __name__ == "__main__":
         dataset=train_dataset,
         batch_size=batch_size, # 每个批次的大小
         shuffle=True, # 是否打乱数据顺序 防止模型过拟合
-        num_workers=num_workers, # 多线程加载数据的工作线程数
         drop_last=True, # 是否丢弃最后一个不完整的batch
+        num_workers=num_workers, # 多线程加载数据的工作线程数
     )
 
     validate_dataset = TextDataset(
@@ -84,8 +84,8 @@ if __name__ == "__main__":
         dataset=validate_dataset,
         batch_size=batch_size, # 每个批次的大小
         shuffle=False, # 是否打乱数据顺序 防止模型过拟合
-        num_workers=num_workers, # 多线程加载数据的工作线程数
         drop_last=False, # 是否丢弃最后一个不完整的batch
+        num_workers=num_workers, # 多线程加载数据的工作线程数
     )
 
     ##############################

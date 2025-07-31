@@ -8,7 +8,7 @@ def calc_loss_batch(input_batch, target_batch, model, device, is_classification=
         input_batch: 输入 token id 的 batch
         target_batch: 目标 token id 的 batch
         model: 语言模型
-        device: 设备
+        device: 决定模型在 CPU 还是 GPU 上运行
         is_classification: 是否为分类任务，如果是，那么只取每个 batch 中的最后一个 token 的 logits 计算损失
     """
     # device 可以将数据转移到 GPU 上

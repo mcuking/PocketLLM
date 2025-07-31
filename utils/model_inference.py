@@ -1,6 +1,6 @@
 import torch
 
-def generate_text(input_text, model, tokenizer, context_length, max_new_tokens, temperature, top_k):
+def generate_text(input_text, model, tokenizer, context_length, max_new_tokens, temperature=0.0, top_k=None):
     """
     生成文本
 
