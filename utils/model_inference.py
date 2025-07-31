@@ -54,6 +54,10 @@ def generate_text(input_text, model, tokenizer, context_length, max_new_tokens, 
             # argmax 方法用于返回张量中每个元素的最大值的索引，
             # 这里返回的是概率最大的词元的 token id，形状为 (batch_size, 1)
             next_token_id = torch.argmax(logits, dim=-1, keepdim=True)
+        
+        # 如果 token id 等于 50256 即 <|endoftext|> ，则表示填充了结束符号，终止循环
+        if next_token_id == 50256:
+            break
 
         # 将新生成的 token id 添加到文本末尾，继续下一个循环，生成下一个 token
         input_tensor = torch.cat((input_tensor, next_token_id), dim=-1)
