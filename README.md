@@ -67,7 +67,7 @@ uv pip install -r requirements.txt
 python pretrain.py --config configs/gpt2_config_124M.json --data_path data/pretrain/西游记.txt --model_path model.pth
 ```
 
-### 参数
+#### 参数
 | 参数 | 说明 | 是否必填 | 默认值 |
 | --- | --- | --- | --- |
 | `config` | 模型配置参数文件路径 | 否 | `configs/gpt2_config_124M.json` |
@@ -80,15 +80,6 @@ python pretrain.py --config configs/gpt2_config_124M.json --data_path data/pretr
 
 另外仓库中提供的预训练数据 `data/pretrain/西游记.txt` 选择的是小说《西游记》最后两回内容。如果仍觉得训练时间较长，可以选择其他更小的数据集进行预训练。
 
-### 输出示例
-
-```bash
-Ep 1 (Step 000000): Train loss 9.375, Validate loss 9.433
-Ep 1 (Step 000100): Train loss 3.053, Validate loss 3.502
-Ep 1 (Step 000200): Train loss 3.238, Validate loss 3.181
-...
-```
-
 ## 文本生成
 
 ### 使用示例
@@ -97,7 +88,7 @@ Ep 1 (Step 000200): Train loss 3.238, Validate loss 3.181
 python generate.py --config configs/gpt2_config_124M.json --model_path model.pth --max_new_tokens 30 --temperature 0.9 --top_k 5
 ```
 
-### 参数
+#### 参数
 | 参数 | 说明 | 是否必填 | 默认值 |
 | --- | --- | --- | --- |
 | `config` | 模型配置参数文件路径 | 否 | `configs/gpt2_config_124M.json` |
@@ -108,7 +99,7 @@ python generate.py --config configs/gpt2_config_124M.json --model_path model.pth
 
 **注意：** 因为文本生成时使用的是预训练好的模型，所以需要使用和预训练时相同的模型配置文件。
 
-### 输出示例
+效果如下：
 
 ```bash
 用户: 师徒方登岸整理，
@@ -135,15 +126,17 @@ python generate.py --config configs/gpt2_config_355M.json --model_path pytorch_m
 
 ## 分类微调
 
-### 使用示例
+### 微调训练
 
-本节主要是对 GPT-2 medium 预训练模型进行微调，将输入文本分类为垃圾/正常。因此需要提前将 GPT-2 medium 预训练模型权重文件下载到本地，具体操作可参考上节内容。然后执行下面的命令即可开启分类微调训练过程。
+本节主要是在 GPT-2 medium 预训练模型基础上进行分类微调，使得模型能够将消息分类为正常/垃圾。因此需要提前将 GPT-2 medium 预训练模型权重文件下载到本地，具体操作可参考文本生成那节内容。
+
+预训练权重文件下载后执行下面的命令即可开启分类微调训练过程。
 
 ```bash
 python class_finetune_train.py --config configs/gpt2_config_355M.json --data_path data/class_finetune/SMSSpamCollection.csv --model_path review_classifier.pth --gpt2_model_path pytorch_model.bin
 ```
 
-### 参数
+#### 参数
 | 参数 | 说明 | 是否必填 | 默认值 |
 | --- | --- | --- | --- |
 | `config` | 模型配置参数文件路径 | 否 | `configs/gpt2_config_355M.json` |
@@ -151,9 +144,9 @@ python class_finetune_train.py --config configs/gpt2_config_355M.json --data_pat
 | `model_path` | 分类微调后保存模型权重文件路径 | 否 | `review_classifier.pth` |
 | `gpt2_model_path` | GPT-2 模型权重文件路径| 否 | `pytorch_model.bin` |
 
-### 输入文本分类
+### 分类消息
 
-当完成分类微调训练后，就可以使用该模型对输入文本进行分类。命令如下：
+当完成分类微调训练后，就可以使用该模型对消息进行分类了。运行命令如下：
 
 ```bash
 python class_finetune_inference.py --config configs/gpt2_config_355M.json --model_path review_classifier.pth
@@ -170,7 +163,43 @@ python class_finetune_inference.py --config configs/gpt2_config_355M.json --mode
 
 ## 指令微调
 
-待完成
+### 微调训练
+
+本节主要是在 GPT-2 medium 预训练模型基础上进行指令微调，使得模型能够执行用户输入的指令。因此需要提前将 GPT-2 medium 预训练模型权重文件下载到本地，具体操作可参考文本生成那节内容。
+
+预训练权重文件下载后执行下面的命令即可开启指令微调训练过程。
+
+```bash
+python instruction_finetune_train.py --config configs/gpt2_config_355M.json --data_path data/instruction_finetune/instruction-data.json --model_path instruction_executor.pth --gpt2_model_path pytorch_model.bin
+```
+
+#### 参数
+| 参数 | 说明 | 是否必填 | 默认值 |
+| --- | --- | --- | --- |
+| `config` | 模型配置参数文件路径 | 否 | `configs/gpt2_config_355M.json` |
+| `data_path` | 用于指令微调的原始数据文件路径 | 否 | `data/instruction_finetune/instruction-data.json` |
+| `model_path` | 指令微调后保存模型权重文件路径 | 否 | `instruction_executor.pth` |
+| `gpt2_model_path` | GPT-2 模型权重文件路径| 否 | `pytorch_model.bin` |
+
+### 执行用户指令
+
+当完成指令微调训练后，就可以使用该模型执行用户指令了。运行命令如下：
+
+```bash
+python instruction_finetune_inference.py --config configs/gpt2_config_355M.json --model_path instruction_executor.pth
+```
+
+效果如下：
+
+```bash
+任务指令: Combine the two sentences into a single coherent sentence.
+任务输入: She did not attend the meeting. She was ill.
+模型: She did not attend the meeting because she was ill.
+
+任务指令: What is the opposite of 'retain'?
+任务输入: 
+模型: The opposite of 'retain' is 'release'.
+```
 
 ## 参考资料
 
