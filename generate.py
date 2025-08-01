@@ -65,9 +65,12 @@ if __name__ == "__main__":
     # 交互式对话
     ##############################
 
-    print("开始对话（输入'exit'退出）")
+    print("开始对话（输入'exit'退出）\n")
     while True:
         input_text = input("用户: ")
+        if input_text.lower() == '':
+            print("输入不能为空！")
+            continue
         if input_text.lower() == 'exit':
             break
 
