@@ -29,6 +29,9 @@ PocketLLM/
 │   ├── model_inference.py         # 模型推理方法，例如生成文本/分类评论/执行指令等
 │   └── model_train.py             # 模型预训练/微调方法
 │
+├── PocketTorch/                   # 简易版神经网络框架实现
+│   └── __init__.py
+│
 ├── class_finetune_inference.py    # 分类微调推理程序
 ├── class_finetune_train.py        # 分类微调训练程序
 ├── generate.py                    # 文本生成程序
