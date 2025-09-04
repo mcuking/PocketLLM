@@ -11,6 +11,9 @@ class Variable:
         self.creator = func
 
     def backward(self):
+        if self.grad is None:
+            self.grad = np.ones_like(self.data) # 如果梯度没有计算过，则初始化为1
+
         funcs = [self.creator]
 
         while funcs:
@@ -50,6 +53,10 @@ class Square(Function):
         dout = 2 * x * dout
         return dout
 
+# 平方函数
+def square(x):
+    return Square()(x)
+
 # 指数函数类    
 class Exp(Function):
     def forward(self, x):
@@ -60,6 +67,10 @@ class Exp(Function):
         dout = np.exp(x) * dout
         return dout
 
+# 指数函数  
+def exp(x):
+    return Exp()(x)
+
 # 数值微分
 # 可以用数值微分的结果来检验反向传播的正确性，也叫梯度检验
 def numerical_diff(f, x, eps=1e-4):
@@ -69,16 +80,8 @@ def numerical_diff(f, x, eps=1e-4):
     y1 = f(x1)
     return (y1.data - y0.data) / (2 * eps)
 
-
-A = Square()
-B = Exp()
-C = Square()
 x = Variable(np.array(0.5))
-a = A(x)
-b = B(a)
-y = C(b)
-
-y.grad = np.array(1.0)
+y = square(exp(square(x)))
 y.backward()
 
 print(x.grad)
