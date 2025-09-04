@@ -3,6 +3,9 @@ import numpy as np
 # 变量类
 class Variable:
     def __init__(self, data):
+        if data is not None and not isinstance(data, np.ndarray):
+                raise TypeError(f"{type(data)} is not np.ndarray")
+
         self.data = data
         self.grad = None
         self.creator = None
@@ -24,12 +27,17 @@ class Variable:
             if x.creator is not None:
                 funcs.append(x.creator) # 将输入变量的创建函数添加到队列中
 
+def as_array(x):
+    if np.isscalar(x):
+        return np.array(x)
+    return x
+
 # 函数类
 class Function:
     def __call__(self, input):
         x = input.data
         y = self.forward(x)
-        output = Variable(y)
+        output = Variable(as_array(y))
         output.set_creator(self) # 设定输出变量的创建函数
         self.input = input # 保存输入变量
         self.output = output # 保存输出变量
