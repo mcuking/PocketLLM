@@ -5,6 +5,21 @@ class Variable:
     def __init__(self, data):
         self.data = data
         self.grad = None
+        self.creator = None
+
+    def set_creator(self, func):
+        self.creator = func
+
+    def backward(self):
+        funcs = [self.creator]
+
+        while funcs:
+            f = funcs.pop() # 获取创建函数
+            x, y = f.input, f.output # 获取输入和输出变量
+            x.grad = f.backward(y.grad) # 反向传播，根据输出变量的梯度计算输入变量的梯度
+            
+            if x.creator is not None:
+                funcs.append(x.creator) # 将输入变量的创建函数添加到队列中
 
 # 函数类
 class Function:
@@ -12,7 +27,9 @@ class Function:
         x = input.data
         y = self.forward(x)
         output = Variable(y)
+        output.set_creator(self) # 设定输出变量的创建函数
         self.input = input # 保存输入变量
+        self.output = output # 保存输出变量
         return output
 
     # 前向传播
@@ -62,8 +79,6 @@ b = B(a)
 y = C(b)
 
 y.grad = np.array(1.0)
-b.grad = C.backward(y.grad)
-a.grad = B.backward(b.grad)
-x.grad = A.backward(a.grad)
+y.backward()
 
 print(x.grad)
