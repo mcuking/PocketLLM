@@ -34,14 +34,20 @@ def as_array(x):
 
 # 函数类
 class Function:
-    def __call__(self, input):
-        x = input.data
-        y = self.forward(x)
-        output = Variable(as_array(y))
-        output.set_creator(self) # 设定输出变量的创建函数
-        self.input = input # 保存输入变量
-        self.output = output # 保存输出变量
-        return output
+    def __call__(self, *inputs):
+        xs = [x.data for x in inputs] # 支持函数的多个输入
+        ys = self.forward(*xs) # 计算输出
+        if not isinstance(ys, tuple):
+            ys = (ys,) # 如果输出不是元组，则将其转换为元组，以便统一处理
+        outputs = [Variable(as_array(y)) for y in ys]
+
+        for output in outputs:
+            output.set_creator(self) # 设定输出变量的创建函数
+
+        self.inputs = inputs # 保存输入变量
+        self.outputs = outputs # 保存输出变量
+
+        return outputs if len(outputs) > 1 else outputs[0] # 如果输出变量只有一个，则返回单个变量，否则返回元组
 
     # 前向传播
     def forward(self, x):
@@ -78,6 +84,15 @@ class Exp(Function):
 # 指数函数  
 def exp(x):
     return Exp()(x)
+
+# 加法函数类
+class Add(Function):
+    def forward(self, x0, x1):
+        return x0 + x1
+    
+# 加法函数
+def add(x0, x1):
+    return Add()(x0, x1)
 
 # 数值微分
 # 可以用数值微分的结果来检验反向传播的正确性，也叫梯度检验
