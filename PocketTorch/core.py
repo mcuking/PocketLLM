@@ -27,10 +27,16 @@ class Variable:
                 gxs = (gxs,) # 如果梯度不是元组，则将其转换为元组，以便统一处理
 
             for x, gx in zip(f.inputs, gxs): # 遍历输入变量和梯度
-                x.grad = gx # 将输入变量的梯度设置为计算得到的梯度
+                if x.grad is None:
+                    x.grad = gx # 如果输入变量的梯度没有计算过，则初始化为梯度
+                else:
+                    x.grad = x.grad + gx # 如果输入变量的梯度已经计算过，则累加梯度
             
                 if x.creator is not None:
                     funcs.append(x.creator) # 将输入变量的创建函数添加到队列中
+
+    def cleargrad(self):
+        self.grad = None # 同一个变量应用在不同的函数时，需要清除梯度
 
 def as_array(x):
     if np.isscalar(x):
