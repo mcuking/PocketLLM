@@ -21,11 +21,16 @@ class Variable:
 
         while funcs:
             f = funcs.pop() # 获取创建函数
-            x, y = f.input, f.output # 获取输入和输出变量
-            x.grad = f.backward(y.grad) # 反向传播，根据输出变量的梯度计算输入变量的梯度
+            gys = [output.grad for output in f.outputs] # 获取输出变量的梯度
+            gxs = f.backward(*gys) # 反向传播，计算输入变量的梯度
+            if not isinstance(gxs, tuple):
+                gxs = (gxs,) # 如果梯度不是元组，则将其转换为元组，以便统一处理
+
+            for x, gx in zip(f.inputs, gxs): # 遍历输入变量和梯度
+                x.grad = gx # 将输入变量的梯度设置为计算得到的梯度
             
-            if x.creator is not None:
-                funcs.append(x.creator) # 将输入变量的创建函数添加到队列中
+                if x.creator is not None:
+                    funcs.append(x.creator) # 将输入变量的创建函数添加到队列中
 
 def as_array(x):
     if np.isscalar(x):
@@ -63,7 +68,7 @@ class Square(Function):
         return x ** 2
 
     def backward(self, dout):
-        x = self.input.data
+        x = self.inputs[0].data
         dout = 2 * x * dout
         return dout
 
@@ -77,7 +82,7 @@ class Exp(Function):
         return np.exp(x)
 
     def backward(self, dout):
-        x = self.input.data
+        x = self.inputs[0].data
         dout = np.exp(x) * dout
         return dout
 
